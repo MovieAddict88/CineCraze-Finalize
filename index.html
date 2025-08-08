@@ -7188,6 +7188,57 @@ Proceed with removal?`;
                     
                     if (seriesEntry) {
                         await updateSeriesMetadata(seriesEntry, seriesData, credits);
+
+                        // NEW: Detect and generate any missing seasons/episodes for this series
+                        try {
+                            const allSeasons = seriesData.seasons || [];
+                            const existingSeasons = new Set(seriesEntry.Seasons?.map(s => s.Season) || []);
+                            let generatedCount = 0;
+
+                            for (const tmdbSeason of allSeasons) {
+                                const seasonNumber = tmdbSeason.season_number;
+                                if (!existingSeasons.has(seasonNumber)) {
+                                    const newSeason = await generateMissingSeason(tmdbId, seasonNumber, seriesEntry);
+                                    if (newSeason) {
+                                        if (!seriesEntry.Seasons) seriesEntry.Seasons = [];
+                                        seriesEntry.Seasons.push(newSeason);
+                                        generatedCount++;
+                                    }
+                                } else {
+                                    const existingSeason = seriesEntry.Seasons.find(s => s.Season === seasonNumber);
+                                    if (existingSeason) {
+                                        const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${seasonNumber}`);
+                                        if (seasonData) {
+                                            const allEpisodes = seasonData.episodes || [];
+                                            const existingEpisodes = new Set(existingSeason.Episodes?.map(e => e.Episode) || []);
+                                            for (const tmdbEpisode of allEpisodes) {
+                                                if (!existingEpisodes.has(tmdbEpisode.episode_number)) {
+                                                    const newEpisode = await generateMissingEpisode(tmdbId, seasonNumber, tmdbEpisode, seriesEntry);
+                                                    if (newEpisode) {
+                                                        if (!existingSeason.Episodes) existingSeason.Episodes = [];
+                                                        existingSeason.Episodes.push(newEpisode);
+                                                        // Keep episodes ordered
+                                                        existingSeason.Episodes.sort((a, b) => a.Episode - b.Episode);
+                                                        generatedCount++;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Ensure seasons are ordered
+                            if (seriesEntry.Seasons) {
+                                seriesEntry.Seasons.sort((a, b) => a.Season - b.Season);
+                            }
+
+                            if (generatedCount > 0) {
+                                console.log(`🆕 Generated ${generatedCount} missing seasons/episodes for ${seriesEntry.Title}`);
+                            }
+                        } catch (genErr) {
+                            console.warn(`Failed generating missing content for ${seriesEntry.Title}:`, genErr);
+                        }
                     }
                     
                     // Process series episodes
