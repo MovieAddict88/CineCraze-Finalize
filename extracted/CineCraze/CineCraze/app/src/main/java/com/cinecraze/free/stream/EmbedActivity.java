@@ -232,7 +232,7 @@ public class EmbedActivity extends AppCompatActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
-            // Modern cache control - prevents cached ads
+            // Strict no-cache to keep overlays away
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
             settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setAllowFileAccessFromFileURLs(true);
@@ -246,6 +246,7 @@ public class EmbedActivity extends AppCompatActivity {
             settings.setDisplayZoomControls(false);
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(true);
+            // Keep UI minimal by injecting Drive fix early after first load
         }
 
         // Enhanced settings for Mega compatibility and app redirect prevention
@@ -253,7 +254,7 @@ public class EmbedActivity extends AppCompatActivity {
             settings.setJavaScriptCanOpenWindowsAutomatically(false); // Prevent popups
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
-            // Modern cache control - prevents cached ads
+            // Strict no-cache + block network loads re-enable after DOM stabilization
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
             settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setAllowFileAccessFromFileURLs(true);
@@ -355,6 +356,28 @@ public class EmbedActivity extends AppCompatActivity {
 
         // Set custom user agent for better compatibility
         settings.setUserAgentString(VideoServerUtils.getUserAgent());
+
+        // Preferred embed domains (vidsrc.*, embed.su, vidlink.pro, autoembed)
+        boolean isPreferredEmbed = url != null && (
+                url.contains("vidsrc.to") || url.contains("vidsrc.net") || url.contains("vidsrc.me") || url.contains("vidsrc.xyz") ||
+                url.contains("embed.su") || url.contains("vidlink.pro") ||
+                url.contains("player.autoembed.cc") || url.contains("autoembed.cc")
+        );
+        if (isPreferredEmbed) {
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+            settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
+            settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setLoadsImagesAutomatically(true);
+            settings.setBlockNetworkImage(false);
+            settings.setBlockNetworkLoads(false);
+            settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setSupportMultipleWindows(false);
+            settings.setLoadWithOverviewMode(true);
+            settings.setUseWideViewPort(true);
+        }
     }
 
     private void initServerSwitcherOverlay() {
@@ -901,13 +924,57 @@ public class EmbedActivity extends AppCompatActivity {
                 return false; // Allow navigation within video server
             }
 
+            // Relaxed rules for preferred embed providers
+            if (isPreferredEmbedDomain(EmbedActivity.this.url)) {
+                if (isPreferredEmbedDomain(url)) {
+                    Log.d(TAG, "Allowing preferred embed intra-network redirect: " + url);
+                    return false;
+                }
+                // vidsrc often uses short hops on same registrable domain; allow same eTLD+1
+                if (isSameRegistrableDomain(url, EmbedActivity.this.url)) {
+                    Log.d(TAG, "Allowing same registrable domain redirect: " + url);
+                    return false;
+                }
+            }
+
             // Block all external navigation (this prevents most ads and redirects)
             Log.d(TAG, "Blocked external navigation to: " + url);
             return true;
+                }
+
+        private boolean isPreferredEmbedDomain(String anyUrl) {
+            if (anyUrl == null) return false;
+            String u = anyUrl.toLowerCase();
+            return u.contains("vidsrc.to") || u.contains("vidsrc.net") || u.contains("vidsrc.me") || u.contains("vidsrc.xyz") ||
+                   u.contains("embed.su") || u.contains("vidlink.pro") || u.contains("player.autoembed.cc") || u.contains("autoembed.cc");
         }
 
-        @Override
-        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        private boolean isSameRegistrableDomain(String urlA, String urlB) {
+            try {
+                java.net.URI a = new java.net.URI(urlA);
+                java.net.URI b = new java.net.URI(urlB);
+                String ha = a.getHost();
+                String hb = b.getHost();
+                if (ha == null || hb == null) return false;
+                String ra = getRegistrable(ha);
+                String rb = getRegistrable(hb);
+                return ra.equals(rb);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private String getRegistrable(String host) {
+            // Simple heuristic: take last two labels (e.g., example.com, vidsrc.net)
+            String[] parts = host.split("\\.");
+            if (parts.length >= 2) {
+                return parts[parts.length - 2] + "." + parts[parts.length - 1];
+            }
+            return host;
+        }
+ 
+         @Override
+         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             Log.d(TAG, "Page started loading: " + url);
 
             // Track MultiEmbed redirects
@@ -968,13 +1035,20 @@ public class EmbedActivity extends AppCompatActivity {
                 multiEmbedRedirectCount = 0;
             }
 
-            if (loadingProgressBar != null) {
+                        if (loadingProgressBar != null) {
                 loadingProgressBar.setVisibility(View.GONE);
             }
-
+ 
             // Remove timeout callback
             timeoutHandler.removeCallbacksAndMessages(null);
 
+            // Inject JavaScript for vidsrc/embed.su/vidlink/autoembed
+            if (isPreferredEmbedDomain(url)) {
+                injectGenericEmbedFix(view);
+                // try again after a short delay to catch late DOM changes
+                new Handler().postDelayed(() -> injectGenericEmbedFix(view), 1500);
+            }
+ 
             // Inject JavaScript for SuperEmbed to fix black screen issue
             if (isSuperEmbed) {
                 injectSuperEmbedFix(view);
@@ -988,53 +1062,23 @@ public class EmbedActivity extends AppCompatActivity {
             // Inject JavaScript for Google Drive to enhance playback
             if (VideoServerUtils.isGoogleDriveUrl(url)) {
                 Log.d(TAG, "Google Drive page finished loading, applying pure video player fix...");
-                // Apply specialized fix for Google Drive pure video player
                 injectGoogleDriveFix(view);
-                // Apply additional fixes after delays to ensure duplicated controllers are removed
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectGoogleDriveFix(view);
-                    }
-                }, 1000); // 1 second delay
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectGoogleDriveFix(view);
-                    }
-                }, 3000); // 3 second delay
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectGoogleDriveFix(view);
-                    }
-                }, 5000); // 5 second delay
+                new Handler().postDelayed(() -> injectGoogleDriveFix(view), 1000);
+                new Handler().postDelayed(() -> injectGoogleDriveFix(view), 3000);
+                new Handler().postDelayed(() -> injectGoogleDriveFix(view), 5000);
+                // Additional: ensure any drive toolbar is hidden again later
+                new Handler().postDelayed(() -> injectGoogleDriveFix(view), 8000);
             }
 
             // Inject JavaScript for Mega to enhance playback
             if (VideoServerUtils.isMegaUrl(url)) {
                 Log.d(TAG, "Mega.nz page finished loading, applying pure video player fix...");
-                // Apply specialized fix for Mega.nz pure video player
                 injectMegaFix(view);
-                // Apply additional fixes after delays to ensure everything is hidden
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectMegaFix(view);
-                    }
-                }, 1000); // 1 second delay
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectMegaFix(view);
-                    }
-                }, 3000); // 3 second delay
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        injectMegaFix(view);
-                    }
-                }, 5000); // 5 second delay
+                new Handler().postDelayed(() -> injectMegaFix(view), 1000);
+                new Handler().postDelayed(() -> injectMegaFix(view), 3000);
+                new Handler().postDelayed(() -> injectMegaFix(view), 5000);
+                // Additional: one more pass for late banners
+                new Handler().postDelayed(() -> injectMegaFix(view), 8000);
             }
 
             // Handle MPD/DASH streams - Shaka Player is already loaded in HTML
@@ -1093,11 +1137,30 @@ public class EmbedActivity extends AppCompatActivity {
             }
 
             super.onPageFinished(view, url);
-        }
+                }
 
         /**
-         * Inject JavaScript to fix SuperEmbed black screen issue and block ads
+         * Generic embed fix: remove overlays/ads, force video/iframe visible, autoplay
          */
+        private void injectGenericEmbedFix(WebView view) {
+            String jsCode = "javascript:" +
+                "try {" +
+                "  console.log('Applying generic embed fix...');" +
+                "  var selectors = ['[class*=\\"ad\\"]','[id*=\\"ad\\"]','[class*=\\"ads\\"]','[id*=\\"ads\\"]','[class*=\\"overlay\\"]','[class*=\\"popup\\"]','[class*=\\"modal\\"]'];" +
+                "  selectors.forEach(function(s){document.querySelectorAll(s).forEach(function(e){e.style.display='none';e.style.visibility='hidden';e.style.opacity='0';e.style.pointerEvents='none';});});" +
+                "  var videos = document.querySelectorAll('video');" +
+                "  videos.forEach(function(v){v.style.display='block';v.style.visibility='visible';v.style.opacity='1';v.style.width='100%';v.style.height='100%';v.controls=true;v.autoplay=true;v.muted=false;v.playsInline=true;});" +
+                "  var iframes = document.querySelectorAll('iframe');" +
+                "  iframes.forEach(function(f){f.style.display='block';f.style.visibility='visible';f.style.opacity='1';f.style.width='100%';f.style.height='100%';f.style.border='none';});" +
+                "  setTimeout(function(){videos.forEach(function(v){if(v.paused){v.play().catch(()=>{});}});}, 800);" +
+                "  console.log('Generic embed fix applied');" +
+                "} catch(e) { console.log('Generic embed fix error: ' + e.message); }";
+            view.evaluateJavascript(jsCode, null);
+        }
+ 
+         /**
+          * Inject JavaScript to fix SuperEmbed black screen issue and block ads
+          */
         private void injectSuperEmbedFix(WebView view) {
             String jsCode = "javascript:" +
                 "try {" +
