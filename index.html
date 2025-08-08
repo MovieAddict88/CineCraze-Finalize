@@ -648,7 +648,6 @@
             transition: background 0.2s ease;
             position: relative;
         }
-
         .content-checkbox-item:last-child {
             border-bottom: none;
         }
@@ -2298,7 +2297,174 @@
 
         let nextId = 1;
 
-                         // Initialize
+        // Enhanced storage system with IndexedDB fallback and compression
+        let useIndexedDB = false;
+        let db = null;
+
+        // Helpers for storage reliability and large-data handling
+        async function ensurePersistentStorage() {
+            try {
+                if (navigator.storage && navigator.storage.persist) {
+                    const granted = await navigator.storage.persist();
+                    console.log(`Persistent storage ${granted ? 'granted' : 'not granted'}`);
+                    return granted;
+                }
+            } catch (e) {
+                console.warn('Persistent storage request failed:', e);
+            }
+            return false;
+        }
+
+        async function logStorageEstimate(prefix = 'Storage') {
+            try {
+                if (navigator.storage && navigator.storage.estimate) {
+                    const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+                    const usageMB = (usage / 1024 / 1024).toFixed(2);
+                    const quotaMB = (quota / 1024 / 1024).toFixed(2);
+                    console.log(`${prefix}: usage ${usageMB} MB / quota ${quotaMB} MB`);
+                }
+            } catch (e) {
+                // no-op
+            }
+        }
+
+        function chunkString(input, chunkSize = 1_000_000) { // ~1MB per chunk
+            const chunks = [];
+            for (let i = 0; i < input.length; i += chunkSize) {
+                chunks.push(input.slice(i, i + chunkSize));
+            }
+            return chunks;
+        }
+
+        // Initialize IndexedDB
+        async function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('PlaylistManager', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    if (!database.objectStoreNames.contains('data')) {
+                        database.createObjectStore('data', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        // Save data to IndexedDB
+        async function saveToIndexedDB(data) {
+            if (!db) {
+                await initIndexedDB();
+            }
+
+            // Try to secure persistent storage to reduce eviction and sometimes increase quota stability
+            await ensurePersistentStorage();
+            await logStorageEstimate('Before IDB save');
+
+            const json = JSON.stringify(data);
+            const chunks = chunkString(json, 1_000_000);
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['data'], 'readwrite');
+                const store = transaction.objectStore('data');
+
+                transaction.oncomplete = async () => {
+                    await logStorageEstimate('After IDB save');
+                    resolve();
+                };
+                transaction.onerror = () => reject(transaction.error || new Error('IndexedDB transaction failed'));
+                transaction.onabort = () => reject(transaction.error || new Error('IndexedDB transaction aborted'));
+
+                // Write metadata and parts. Using only chunked format to avoid giant single-record clones
+                const meta = {
+                    id: 'playlist-data:meta',
+                    totalParts: chunks.length,
+                    version: 2,
+                    timestamp: Date.now(),
+                };
+
+                // Put meta first so readers know how many parts to expect
+                store.put(meta);
+                for (let i = 0; i < chunks.length; i++) {
+                    store.put({ id: `playlist-data:part:${i}`, data: chunks[i] });
+                }
+
+                // Best-effort cleanup of legacy single-record key (ignore errors)
+                try { store.delete('playlist-data'); } catch (_) { /* ignore */ }
+            });
+        }
+
+        // Load data from IndexedDB
+        async function loadFromIndexedDB() {
+            if (!db) {
+                await initIndexedDB();
+            }
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['data'], 'readonly');
+                const store = transaction.objectStore('data');
+
+                const metaReq = store.get('playlist-data:meta');
+                metaReq.onerror = () => {
+                    // Fallback to legacy single-record key
+                    const legacyReq = store.get('playlist-data');
+                    legacyReq.onerror = () => reject(legacyReq.error);
+                    legacyReq.onsuccess = () => {
+                        const result = legacyReq.result;
+                        resolve(result ? result.data : null);
+                    };
+                };
+                metaReq.onsuccess = () => {
+                    const meta = metaReq.result;
+                    if (!meta || !meta.totalParts || meta.totalParts <= 0) {
+                        // Fallback to legacy single-record key
+                        const legacyReq = store.get('playlist-data');
+                        legacyReq.onerror = () => reject(legacyReq.error);
+                        legacyReq.onsuccess = () => {
+                            const result = legacyReq.result;
+                            resolve(result ? result.data : null);
+                        };
+                        return;
+                    }
+
+                    const total = meta.totalParts;
+                    const parts = new Array(total);
+                    let fetched = 0;
+                    let failed = false;
+
+                    for (let i = 0; i < total; i++) {
+                        const partReq = store.get(`playlist-data:part:${i}`);
+                        partReq.onerror = () => {
+                            if (!failed) {
+                                failed = true;
+                                reject(partReq.error || new Error(`Failed to read part ${i}`));
+                            }
+                        };
+                        partReq.onsuccess = () => {
+                            if (failed) return;
+                            const res = partReq.result;
+                            parts[i] = res ? res.data : '';
+                            fetched++;
+                            if (fetched === total) {
+                                try {
+                                    const json = parts.join('');
+                                    const parsed = JSON.parse(json);
+                                    resolve(parsed);
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            }
+                        };
+                    }
+                };
+            });
+        }
+
+        // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
             showStatus('info', 'Loading saved data...');
             await loadSavedData();
@@ -2708,7 +2874,6 @@
                 showSearchLoading(false);
             }
         }
-        
         // Load content for specific region and year
         async function loadRegionalContent() {
             const searchType = document.getElementById('search-type').value;
@@ -3139,7 +3304,7 @@
 
             for (const entry of seriesCategory.Entries) {
                 try {
-                    // Extract TMDB ID from existing sources (if available)
+                    // Extract TMDB ID from entry sources
                     const tmdbId = extractTMDBIdFromEntry(entry);
                     if (!tmdbId) {
                         console.log(`Skipping ${entry.Title}: No TMDB ID found`);
@@ -3333,7 +3498,6 @@
             }
             return null;
         }
-
         // Generate missing season
         async function generateMissingSeason(tmdbId, seasonNumber, parentEntry) {
             try {
@@ -3882,7 +4046,6 @@
                 console.error('Paste error:', error);
             }
         }
-
         async function addManualContent() {
             const type = document.getElementById('manual-type').value;
             const title = document.getElementById('manual-title').value.trim();
@@ -4496,7 +4659,6 @@
             document.getElementById('import-progress-section').style.display = 'none';
             document.getElementById('cancel-import-btn').style.display = 'none';
         }
-        
         // Chunked Import - Alternative approach for large files
         function importDataChunked() {
             const fileInput = document.getElementById('import-file');
@@ -4677,7 +4839,7 @@
                 // Try to save (might fail due to size)
                 updateImportProgress(96, processedEntries, 'Attempting to save...', 'Saving');
                 try {
-                    saveData();
+                    await saveData();
                     console.log('✅ Data saved to localStorage');
                 } catch (saveError) {
                     console.warn('⚠️ Could not save to localStorage:', saveError.message);
@@ -4743,7 +4905,7 @@
             }
         }
 
-                                 function exportData() {
+        async function exportData() {
             try {
                 // Export the Categories structure directly
                 const dataStr = JSON.stringify(currentData, null, 2);
@@ -4847,7 +5009,7 @@
             }
         }
 
-                 function exportSample() {
+        function exportSample() {
              const sampleMovie = {
                  id: 1,
                  title: "Sample Movie",
@@ -5063,6 +5225,7 @@
                     }
                 } else {
                     // Migrate from localStorage to IndexedDB
+                    await ensurePersistentStorage();
                     await saveToIndexedDB(currentData);
                     localStorage.removeItem('playlist-data');
                     localStorage.removeItem('playlist-data-compressed');
@@ -5081,7 +5244,6 @@
         async function optimizeStorage() {
             // Show detailed warning before proceeding
             const warningMessage = `⚠️ STORAGE OPTIMIZATION WARNING ⚠️
-
 This will remove entries that appear to have:
 • Empty or missing titles
 • No server links
@@ -5713,7 +5875,6 @@ Proceed with removal?`;
                 }
             }
         }
-
         function showStatus(type, message) {
             // Create or update status element
             let statusEl = document.getElementById('global-status');
@@ -5742,274 +5903,6 @@ Proceed with removal?`;
             const element = document.getElementById(elementId);
             if (element) {
                 element.style.display = show ? 'inline-block' : 'none';
-            }
-        }
-
-                                 // Enhanced storage system with IndexedDB fallback and compression
-        let useIndexedDB = false;
-        let db = null;
-
-        // Initialize IndexedDB
-        async function initIndexedDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('PlaylistManager', 1);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    const database = event.target.result;
-                    if (!database.objectStoreNames.contains('data')) {
-                        database.createObjectStore('data', { keyPath: 'id' });
-                    }
-                };
-            });
-        }
-
-        // Save data to IndexedDB
-        async function saveToIndexedDB(data) {
-            if (!db) {
-                await initIndexedDB();
-            }
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['data'], 'readwrite');
-                const store = transaction.objectStore('data');
-                const request = store.put({ id: 'playlist-data', data: data, timestamp: Date.now() });
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve();
-            });
-        }
-
-        // Load data from IndexedDB
-        async function loadFromIndexedDB() {
-            if (!db) {
-                await initIndexedDB();
-            }
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['data'], 'readonly');
-                const store = transaction.objectStore('data');
-                const request = store.get('playlist-data');
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    const result = request.result;
-                    resolve(result ? result.data : null);
-                };
-            });
-        }
-
-        // Simple compression using LZ-string-like algorithm
-        function compressData(data) {
-            try {
-                const jsonString = JSON.stringify(data);
-                // Simple compression by removing whitespace and common patterns
-                let compressed = jsonString
-                    .replace(/\s+/g, '')
-                    .replace(/"MainCategory"/g, '"MC"')
-                    .replace(/"SubCategories"/g, '"SC"')
-                    .replace(/"Entries"/g, '"E"')
-                    .replace(/"Title"/g, '"T"')
-                    .replace(/"Description"/g, '"D"')
-                    .replace(/"Poster"/g, '"P"')
-                    .replace(/"Thumbnail"/g, '"Th"')
-                    .replace(/"Rating"/g, '"R"')
-                    .replace(/"Year"/g, '"Y"')
-                    .replace(/"Servers"/g, '"S"')
-                    .replace(/"Seasons"/g, '"Se"')
-                    .replace(/"Episodes"/g, '"Ep"')
-                    .replace(/"Episode"/g, '"En"')
-                    .replace(/"Season"/g, '"Sn"')
-                    .replace(/"Duration"/g, '"Du"')
-                    .replace(/"SubCategory"/g, '"SuC"')
-                    .replace(/"Country"/g, '"Co"');
-                
-                return compressed;
-            } catch (error) {
-                console.warn('Compression failed, using original data:', error);
-                return JSON.stringify(data);
-            }
-        }
-
-        // Decompress data
-        function decompressData(compressedString) {
-            try {
-                let decompressed = compressedString
-                    .replace(/"MC"/g, '"MainCategory"')
-                    .replace(/"SC"/g, '"SubCategories"')
-                    .replace(/"E"/g, '"Entries"')
-                    .replace(/"T"/g, '"Title"')
-                    .replace(/"D"/g, '"Description"')
-                    .replace(/"P"/g, '"Poster"')
-                    .replace(/"Th"/g, '"Thumbnail"')
-                    .replace(/"R"/g, '"Rating"')
-                    .replace(/"Y"/g, '"Year"')
-                    .replace(/"S"/g, '"Servers"')
-                    .replace(/"Se"/g, '"Seasons"')
-                    .replace(/"Ep"/g, '"Episodes"')
-                    .replace(/"En"/g, '"Episode"')
-                    .replace(/"Sn"/g, '"Season"')
-                    .replace(/"Du"/g, '"Duration"')
-                    .replace(/"SuC"/g, '"SubCategory"')
-                    .replace(/"Co"/g, '"Country"');
-                
-                return JSON.parse(decompressed);
-            } catch (error) {
-                console.warn('Decompression failed, trying original parse:', error);
-                return JSON.parse(compressedString);
-            }
-        }
-
-        // Enhanced save function with multiple strategies
-        async function saveData() {
-            try {
-                const dataString = JSON.stringify(currentData);
-                const dataSizeMB = (dataString.length / 1024 / 1024).toFixed(2);
-                console.log(`💾 Attempting to save ${dataSizeMB}MB of data`);
-                
-                // Strategy 1: Try localStorage with compression for smaller datasets
-                if (dataString.length < 4 * 1024 * 1024) { // Less than 4MB
-                    try {
-                        const compressed = compressData(currentData);
-                        const compressionRatio = ((dataString.length - compressed.length) / dataString.length * 100).toFixed(1);
-                        console.log(`🗜️ Compression saved ${compressionRatio}% space`);
-                        
-                        // Test localStorage availability
-                        const testKey = 'storage-test-' + Date.now();
-                        localStorage.setItem(testKey, 'test');
-                        localStorage.removeItem(testKey);
-                        
-                        localStorage.setItem('playlist-data', compressed);
-                        localStorage.setItem('playlist-data-compressed', 'true');
-                        console.log('✅ Data saved to localStorage with compression');
-                        useIndexedDB = false;
-                        return;
-                    } catch (localStorageError) {
-                        console.warn('⚠️ localStorage failed, trying IndexedDB:', localStorageError.message);
-                    }
-                }
-                
-                // Strategy 2: Use IndexedDB for large datasets
-                console.log('📦 Using IndexedDB for large dataset...');
-                await saveToIndexedDB(currentData);
-                useIndexedDB = true;
-                
-                // Clear localStorage to free up space
-                try {
-                    localStorage.removeItem('playlist-data');
-                    localStorage.removeItem('playlist-data-compressed');
-                    localStorage.setItem('playlist-data-indexeddb', 'true');
-                } catch (e) {
-                    console.warn('Could not clear localStorage:', e);
-                }
-                
-                console.log('✅ Data saved to IndexedDB successfully');
-                showStatus('success', `Large dataset (${dataSizeMB}MB) saved to IndexedDB successfully!`);
-                
-            } catch (error) {
-                console.error('💥 All storage methods failed:', error);
-                
-                let errorMessage = 'Failed to save data: ';
-                if (error.name === 'QuotaExceededError') {
-                    errorMessage += 'Storage quota exceeded. Try clearing browser data or use export feature.';
-                } else if (error.message.includes('not available')) {
-                    errorMessage += 'Storage not available. Data will only persist in current session.';
-                } else {
-                    errorMessage += error.message;
-                }
-                
-                showStatus('error', errorMessage);
-                throw new Error(errorMessage);
-            }
-        }
-        async function loadSavedData() {
-            try {
-                // Check if data is stored in IndexedDB
-                if (localStorage.getItem('playlist-data-indexeddb') === 'true') {
-                    console.log('📦 Loading data from IndexedDB...');
-                    try {
-                        const data = await loadFromIndexedDB();
-                        if (data && data.Categories && Array.isArray(data.Categories)) {
-                            currentData = data;
-                            useIndexedDB = true;
-                            console.log('✅ Data loaded from IndexedDB successfully');
-                            return;
-                        }
-                    } catch (indexedDBError) {
-                        console.warn('⚠️ IndexedDB loading failed:', indexedDBError);
-                        localStorage.removeItem('playlist-data-indexeddb');
-                    }
-                }
-                
-                // Try localStorage with compression check
-                let saved = localStorage.getItem('playlist-data');
-                if (saved) {
-                    try {
-                        let data;
-                        
-                        // Check if data is compressed
-                        if (localStorage.getItem('playlist-data-compressed') === 'true') {
-                            console.log('🗜️ Decompressing data from localStorage...');
-                            data = decompressData(saved);
-                        } else {
-                            data = JSON.parse(saved);
-                        }
-                        
-                        // Check if it's the new Categories format
-                        if (data.Categories && Array.isArray(data.Categories)) {
-                            currentData = data;
-                            useIndexedDB = false;
-                            console.log('✅ Data loaded from localStorage successfully');
-                            return;
-                        }
-                    } catch (parseError) {
-                        console.warn('⚠️ Failed to parse localStorage data:', parseError);
-                        localStorage.removeItem('playlist-data');
-                        localStorage.removeItem('playlist-data-compressed');
-                    }
-                }
-                
-                // Fallback to old cinemax-data format
-                saved = localStorage.getItem('cinemax-data');
-                if (saved) {
-                    try {
-                        const data = JSON.parse(saved);
-                        console.log('🔄 Converting old format to Categories structure...');
-                        // For now, just use the default structure
-                        currentData = {
-                            Categories: [
-                                {
-                                    MainCategory: "Live TV",
-                                    SubCategories: ["Entertainment"],
-                                    Entries: []
-                                },
-                                {
-                                    MainCategory: "Movies", 
-                                    SubCategories: ["Action", "Comedy", "Drama", "Horror", "Sci-Fi"],
-                                    Entries: []
-                                },
-                                {
-                                    MainCategory: "TV Series",
-                                    SubCategories: ["Anime", "Action", "Comedy", "Drama"],
-                                    Entries: []
-                                }
-                            ]
-                        };
-                        localStorage.removeItem('cinemax-data');
-                        await saveData(); // Save in new format
-                    } catch (error) {
-                        console.error('Error converting old data:', error);
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Error loading saved data:', error);
-                showStatus('warning', 'Could not load saved data. Starting with empty dataset.');
             }
         }
 
@@ -6126,7 +6019,6 @@ Proceed with removal?`;
                 }
             };
         }
-
         function generateEmbedSources(tmdbId, contentType = 'movie', seasonNum = null, episodeNum = null) {
             const config = getAutoEmbedConfig();
             const sources = [];
@@ -7314,7 +7206,6 @@ Proceed with removal?`;
                 console.error(`⚠️ Error updating movie metadata for ${movie.Title}:`, error);
             }
         }
-
         async function updateSeriesMetadata(seriesEntry, seriesData, credits) {
             try {
                 // Update basic metadata
