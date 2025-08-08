@@ -253,12 +253,6 @@
             color: white;
         }
         
-        .btn-accent {
-            background: var(--accent);
-            color: var(--background);
-            font-weight: bold;
-        }
-        
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
@@ -338,13 +332,6 @@
             background: linear-gradient(90deg, var(--primary), var(--accent));
             width: 0%;
             transition: width 0.3s ease;
-        }
-        
-        .progress-text {
-            text-align: center;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-top: 5px;
         }
         
         .status {
@@ -517,17 +504,14 @@
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 10px;
         }
 
         .embed-option {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            padding: 8px;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
             background: var(--background);
             border-radius: 8px;
             border: 1px solid var(--surface-light);
@@ -618,18 +602,6 @@
             font-weight: 600;
             color: var(--accent);
             margin-left: auto;
-        }
-        
-        .api-status {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 8px;
-            display: block;
-        }
-        
-        .api-status span {
-            color: var(--success);
-            font-weight: bold;
         }
 
         .content-checkbox-list {
@@ -773,6 +745,7 @@
                 grid-template-columns: 1fr;
             }
         }
+
         @media (max-width: 768px) {
             body {
                 padding: max(15px, env(safe-area-inset-top)) max(15px, env(safe-area-inset-right)) calc(var(--bottom-bar-height) + max(15px, env(safe-area-inset-bottom))) max(15px, env(safe-area-inset-left));
@@ -916,354 +889,7 @@
                 font-size: 0.6rem;
             }
         }
-        
-        /* GitHub Upload Styles */
-        .github-upload-section {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid var(--surface-light);
-            margin-top: 15px;
-        }
-        
-        .github-upload-section h3 {
-            color: var(--accent);
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-        }
-        
-        .github-upload-section .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--surface-light);
-            border-radius: 6px;
-            background: var(--background);
-            color: var(--text);
-            font-size: 0.9rem;
-        }
-        
-        .github-upload-section .form-control:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
-            outline: none;
-        }
-        
-        .github-upload-section .form-text {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 5px;
-            display: block;
-        }
-        
-        .github-upload-section .form-text a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-        
-        .github-upload-section .form-text a:hover {
-            text-decoration: underline;
-        }
-        
-        .github-status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            display: none;
-        }
-        
-        .github-status.success {
-            background: rgba(70, 211, 105, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(70, 211, 105, 0.3);
-        }
-        
-        .github-status.error {
-            background: rgba(244, 6, 18, 0.1);
-            color: var(--danger);
-            border: 1px solid rgba(244, 6, 18, 0.3);
-        }
-        
-        .github-status.info {
-            background: rgba(0, 212, 255, 0.1);
-            color: var(--accent);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-        }
-        
-        .github-status.warning {
-            background: rgba(255, 165, 0, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(255, 165, 0, 0.3);
-        }
     </style>
-    
-    <!-- GitHub Upload Script -->
-    <script>
-        // GitHub Upload Configuration
-        const GITHUB_CONFIG = {
-            owner: 'MovieAddict88',
-            repo: 'Movie-Source',
-            branch: 'main',
-            path: 'playlist.json',
-            token: ''
-        };
-
-        // Function to upload JSON to GitHub
-        async function uploadToGitHub(jsonData, filename = 'playlist.json') {
-            if (!GITHUB_CONFIG.token) {
-                showGitHubStatus('error', 'GitHub token not configured. Please set your token first.');
-                return;
-            }
-
-            const progressBar = document.getElementById('github-upload-progress');
-            const progressFill = document.getElementById('github-upload-progress-fill');
-            const progressText = document.getElementById('github-upload-progress-text');
-
-            try {
-                // Show progress bar
-                if (progressBar) {
-                    progressBar.style.display = 'block';
-                    progressFill.style.width = '0%';
-                }
-                if (progressText) {
-                    progressText.style.display = 'block';
-                    progressText.textContent = 'Initializing upload...';
-                }
-
-                showGitHubStatus('info', 'Initializing GitHub upload...');
-                updateProgress(10, 'Checking repository...');
-
-                // First, check if file exists to get its SHA
-                const checkUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${filename}`;
-                const checkResponse = await fetch(checkUrl, {
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-
-                updateProgress(30, 'Preparing upload data...');
-
-                let sha = null;
-                if (checkResponse.ok) {
-                    const fileInfo = await checkResponse.json();
-                    sha = fileInfo.sha;
-                    console.log('📄 Existing file found, will update');
-                } else {
-                    console.log('📄 New file will be created');
-                }
-
-                updateProgress(50, 'Encoding data...');
-
-                // Debug: Check the data before encoding
-                console.log('🔍 Data being uploaded (size):', jsonData.length, 'characters');
-                console.log('🔍 Data preview (first 200 chars):', jsonData.substring(0, 200));
-                console.log('🔍 Data contains Categories:', jsonData.includes('"Categories"'));
-                console.log('🔍 Data contains Movies:', jsonData.includes('"Movies"'));
-                
-                // Prepare the upload data
-                const content = btoa(unescape(encodeURIComponent(jsonData)));
-                const dataSizeMB = (jsonData.length / 1024 / 1024).toFixed(2);
-                
-                console.log('🔍 Encoded content length:', content.length);
-                console.log('🔍 Data size in MB:', dataSizeMB);
-                
-                const uploadData = {
-                    message: `Update ${filename} - ${new Date().toISOString().split('T')[0]} (${dataSizeMB}MB)`,
-                    content: content,
-                    branch: GITHUB_CONFIG.branch
-                };
-
-                if (sha) {
-                    uploadData.sha = sha;
-                }
-
-                updateProgress(70, 'Uploading to GitHub...');
-
-                // Upload the file
-                const uploadUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${filename}`;
-                const uploadResponse = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(uploadData)
-                });
-
-                updateProgress(90, 'Processing response...');
-
-                if (uploadResponse.ok) {
-                    const result = await uploadResponse.json();
-                    updateProgress(100, 'Upload completed successfully!');
-                    
-                    showGitHubStatus('success', `✅ Successfully uploaded to GitHub! File: ${result.content.name} (${dataSizeMB}MB)`);
-                    
-                    // Show the GitHub URL
-                    const fileUrl = `https://github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/blob/${GITHUB_CONFIG.branch}/${filename}`;
-                    setTimeout(() => {
-                        showGitHubStatus('info', `🔗 View file: ${fileUrl}`);
-                    }, 2000);
-                    
-                    // Hide progress bar after success
-                    setTimeout(() => {
-                        if (progressBar) progressBar.style.display = 'none';
-                        if (progressText) progressText.style.display = 'none';
-                    }, 3000);
-                    
-                } else {
-                    const error = await uploadResponse.json();
-                    updateProgress(0, 'Upload failed');
-                    showGitHubStatus('error', `❌ GitHub upload failed: ${error.message}`);
-                    
-                    if (progressBar) {
-                        setTimeout(() => {
-                            progressBar.style.display = 'none';
-                            if (progressText) progressText.style.display = 'none';
-                        }, 3000);
-                    }
-                }
-
-            } catch (error) {
-                updateProgress(0, 'Upload error occurred');
-                showGitHubStatus('error', `❌ Upload error: ${error.message}`);
-                console.error('GitHub upload error:', error);
-                
-                if (progressBar) {
-                    setTimeout(() => {
-                        progressBar.style.display = 'none';
-                        if (progressText) progressText.style.display = 'none';
-                    }, 3000);
-                }
-            }
-
-            function updateProgress(percentage, message) {
-                if (progressFill) {
-                    progressFill.style.width = `${percentage}%`;
-                }
-                if (progressText) {
-                    progressText.textContent = message;
-                }
-                console.log(`📊 Upload Progress: ${percentage}% - ${message}`);
-            }
-        }
-
-        // Function to export current data to GitHub
-        async function exportToGitHub() {
-            if (!currentData || !currentData.Categories) {
-                showGitHubStatus('error', 'No data to export! Please load or create some categories first.');
-                return;
-            }
-
-            try {
-                showGitHubStatus('info', 'Preparing current data for upload...');
-                
-                // Debug: Log current data structure
-                console.log('🔍 Current data before upload:', currentData);
-                console.log('🎬 Movies count:', currentData.Categories.find(c => c.MainCategory === 'Movies')?.Entries.length || 0);
-                console.log('📺 TV Series count:', currentData.Categories.find(c => c.MainCategory === 'TV Series')?.Entries.length || 0);
-                console.log('📻 Live TV count:', currentData.Categories.find(c => c.MainCategory === 'Live TV')?.Entries.length || 0);
-                
-                // Use current data directly instead of save/reload cycle
-                // This prevents uploading compressed/empty data
-                const dataStr = JSON.stringify(currentData, null, 2);
-                const dataSizeMB = (dataStr.length / 1024 / 1024).toFixed(2);
-                
-                console.log(`📤 Uploading ${dataSizeMB}MB of current data to GitHub`);
-                console.log('📋 Data preview (first 500 chars):', dataStr.substring(0, 500) + '...');
-                
-                showGitHubStatus('info', `Uploading current data (${dataSizeMB}MB) to GitHub...`);
-                
-                // Also save locally for backup
-                try {
-                    await saveData();
-                    console.log('✅ Data also saved locally as backup');
-                } catch (saveError) {
-                    console.warn('⚠️ Local backup save failed:', saveError);
-                    // Continue with upload even if local save fails
-                }
-                
-                await uploadToGitHub(dataStr, 'playlist.json');
-                
-            } catch (error) {
-                console.error('GitHub export preparation error:', error);
-                showGitHubStatus('error', `Failed to prepare data for upload: ${error.message}`);
-            }
-        }
-
-        // Function to debug current data
-        function debugCurrentData() {
-            console.log('🔍 DEBUG: Current Data Structure');
-            console.log('='.repeat(50));
-            console.log('📊 currentData exists:', !!currentData);
-            console.log('📊 currentData.Categories exists:', !!(currentData && currentData.Categories));
-            console.log('📊 Categories count:', currentData?.Categories?.length || 0);
-            
-            if (currentData && currentData.Categories) {
-                currentData.Categories.forEach(category => {
-                    console.log(`📁 ${category.MainCategory}: ${category.Entries?.length || 0} entries`);
-                    if (category.Entries && category.Entries.length > 0) {
-                        console.log(`   📝 First entry: ${category.Entries[0].Title || 'No title'}`);
-                    }
-                });
-            }
-            
-            const dataStr = JSON.stringify(currentData, null, 2);
-            const dataSizeMB = (dataStr.length / 1024 / 1024).toFixed(2);
-            console.log('📏 Data size:', dataSizeMB, 'MB');
-            console.log('📋 Data preview (first 300 chars):', dataStr.substring(0, 300) + '...');
-            console.log('='.repeat(50));
-            
-            showGitHubStatus('info', `Debug complete! Data size: ${dataSizeMB}MB. Check console for details.`);
-        }
-
-        // Function to set GitHub token from input
-        function setGitHubToken() {
-            const tokenInput = document.getElementById('github-token');
-            const token = tokenInput.value.trim();
-            
-            if (!token) {
-                showGitHubStatus('error', 'Please enter a GitHub token.');
-                return;
-            }
-            
-            GITHUB_CONFIG.token = token;
-            localStorage.setItem('github_token', token);
-            showGitHubStatus('success', 'GitHub token saved successfully!');
-            tokenInput.value = ''; // Clear the input for security
-        }
-
-        // Function to check GitHub token status
-        function checkGitHubToken() {
-            if (GITHUB_CONFIG.token) {
-                showGitHubStatus('success', 'GitHub token is configured and ready to use!');
-            } else {
-                showGitHubStatus('warning', 'GitHub token not configured. Please set your token first.');
-            }
-        }
-
-        // Function to show GitHub status messages
-        function showGitHubStatus(type, message) {
-            const statusDiv = document.getElementById('github-status');
-            statusDiv.className = `github-status ${type}`;
-            statusDiv.textContent = message;
-            statusDiv.style.display = 'block';
-            
-            // Auto-hide after 8 seconds
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 8000);
-        }
-
-        // Load token from localStorage on page load
-        window.addEventListener('load', function() {
-            const savedToken = localStorage.getItem('github_token');
-            if (savedToken) {
-                GITHUB_CONFIG.token = savedToken;
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="container">
@@ -1274,21 +900,6 @@
 
         <!-- TMDB Generator Tab -->
         <div id="tmdb-generator" class="tab-content active">
-            <!-- API Key Selection -->
-            <div class="card">
-                <h2>🔑 API Key Management</h2>
-                <div class="form-group">
-                    <label for="api-key-select">Select TMDB API Key (for backup detection avoidance)</label>
-                    <select id="api-key-select" onchange="switchApiKey()">
-                        <option value="primary">Primary Key (***61)</option>
-                        <option value="backup1">Backup Key 1 (***69)</option>
-                        <option value="backup2">Backup Key 2 (***3f)</option>
-                        <option value="backup3">Backup Key 3 (***8d)</option>
-                    </select>
-                    <small class="api-status">Current: <span id="current-api-status">Primary (Active)</span></small>
-                </div>
-            </div>
-            
             <div class="grid grid-2">
                 <div class="card">
                     <h2>🎬 Movie Generator</h2>
@@ -1352,79 +963,11 @@
                     </div>
                     <div class="form-group">
                         <label>Content Type</label>
-                        <select id="search-type" onchange="handleSearchTypeChange()">
-                            <option value="search">🔍 Search Mode</option>
-                            <option value="kdrama">🇰🇷 K-Drama (Korean)</option>
-                            <option value="cdrama">🇨🇳 C-Drama (Chinese)</option>
-                            <option value="jdrama">🇯🇵 J-Drama (Japanese)</option>
-                            <option value="pinoy">🇵🇭 Pinoy Series (Filipino)</option>
-                            <option value="thai">🇹🇭 Thai Drama</option>
-                            <option value="indian">🇮🇳 Indian Series</option>
-                            <option value="turkish">🇹🇷 Turkish Drama</option>
-                            <option value="korean-variety">🎭 Korean Variety Shows</option>
+                        <select id="search-type">
+                            <option value="multi">All</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Shows</option>
                         </select>
-                    </div>
-                    <div class="form-group" id="search-input-group">
-                        <label>Search Query</label>
-                        <input type="text" id="tmdb-search" placeholder="Search for movies or TV shows...">
-                        <div class="form-group">
-                            <label>Search Type</label>
-                            <select id="search-subtype">
-                                <option value="multi">All</option>
-                                <option value="movie">Movies</option>
-                                <option value="tv">TV Shows</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" id="regional-browse-group" style="display: none;">
-                        <label>Content Type</label>
-                        <select id="regional-content-type">
-                            <option value="tv">📺 TV Series/Dramas</option>
-                            <option value="movie">🎬 Movies</option>
-                            <option value="both">🎭 Both Movies & Series</option>
-                        </select>
-                        <label>Select Year to Browse</label>
-                        <select id="year-filter" onchange="loadRegionalContent()">
-                            <option value="">-- Select Year --</option>
-                            <option value="2024">2024 (Latest)</option>
-                            <option value="2023">2023</option>
-                            <option value="2022">2022</option>
-                            <option value="2021">2021</option>
-                            <option value="2020">2020</option>
-                            <option value="2019">2019</option>
-                            <option value="2018">2018</option>
-                            <option value="2017">2017</option>
-                            <option value="2016">2016</option>
-                            <option value="2015">2015</option>
-                            <option value="2014">2014</option>
-                            <option value="2013">2013</option>
-                            <option value="2012">2012</option>
-                            <option value="2011">2011</option>
-                            <option value="2010">2010</option>
-                            <option value="2009">2009</option>
-                            <option value="2008">2008</option>
-                            <option value="2007">2007</option>
-                            <option value="2006">2006</option>
-                            <option value="2005">2005</option>
-                            <option value="2004">2004</option>
-                            <option value="2003">2003</option>
-                            <option value="2002">2002</option>
-                            <option value="2001">2001</option>
-                            <option value="2000">2000</option>
-                            <option value="1999">1999</option>
-                            <option value="1998">1998</option>
-                            <option value="1997">1997</option>
-                            <option value="1996">1996</option>
-                            <option value="1995">1995</option>
-                            <option value="all-recent">All Recent (2020-2024)</option>
-                            <option value="all-2010s">All 2010s (2010-2019)</option>
-                            <option value="all-2000s">All 2000s (2000-2009)</option>
-                            <option value="all-classic">All Classic (1990-1999)</option>
-                            <option value="all-time">All Time (1990-2024)</option>
-                        </select>
-                        <small style="display: block; margin-top: 8px; color: var(--text-secondary);">
-                            Choose any year (1995-2024) or decade collection for comprehensive results
-                        </small>
                     </div>
                 </div>
                 <button class="btn btn-primary" onclick="searchTMDB()">
@@ -1571,100 +1114,38 @@
                 <div class="card">
                     <h2>🎯 Genre-based Generation</h2>
                     <div class="form-group">
-                        <label>Content Type</label>
-                        <select id="content-type-select">
-                            <option value="movie">Movies Only</option>
-                            <option value="tv">TV Series Only</option>
-                            <option value="both">Both Movies & TV Series</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <label>Genre</label>
                         <select id="genre-select">
-                            <optgroup label="Universal Genres">
-                                <option value="28">Action</option>
-                                <option value="12">Adventure</option>
-                                <option value="16">Animation</option>
-                                <option value="35">Comedy</option>
-                                <option value="80">Crime</option>
-                                <option value="99">Documentary</option>
-                                <option value="18">Drama</option>
-                                <option value="10751">Family</option>
-                                <option value="14">Fantasy</option>
-                                <option value="36">History</option>
-                                <option value="27">Horror</option>
-                                <option value="10402">Music</option>
-                                <option value="9648">Mystery</option>
-                                <option value="10749">Romance</option>
-                                <option value="878">Science Fiction</option>
-                                <option value="53">Thriller</option>
-                                <option value="10752">War</option>
-                                <option value="37">Western</option>
-                            </optgroup>
-                            <optgroup label="TV-Specific Genres">
-                                <option value="10759">Action & Adventure</option>
-                                <option value="16">Animation</option>
-                                <option value="35">Comedy</option>
-                                <option value="80">Crime</option>
-                                <option value="99">Documentary</option>
-                                <option value="18">Drama</option>
-                                <option value="10751">Family</option>
-                                <option value="10762">Kids</option>
-                                <option value="9648">Mystery</option>
-                                <option value="10763">News</option>
-                                <option value="10764">Reality</option>
-                                <option value="10765">Sci-Fi & Fantasy</option>
-                                <option value="10766">Soap</option>
-                                <option value="10767">Talk</option>
-                                <option value="10768">War & Politics</option>
-                                <option value="37">Western</option>
-                            </optgroup>
-                            <optgroup label="Movie-Specific Genres">
-                                <option value="10770">TV Movie</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Release Year (Optional)</label>
-                        <select id="year-select">
-                            <option value="">Any Year</option>
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
-                            <option value="2022">2022</option>
-                            <option value="2021">2021</option>
-                            <option value="2020">2020</option>
-                            <option value="2019">2019</option>
-                            <option value="2018">2018</option>
-                            <option value="2017">2017</option>
-                            <option value="2016">2016</option>
-                            <option value="2015">2015</option>
-                            <option value="2014">2014</option>
-                            <option value="2013">2013</option>
-                            <option value="2012">2012</option>
-                            <option value="2011">2011</option>
-                            <option value="2010">2010</option>
+                            <option value="28">Action</option>
+                            <option value="12">Adventure</option>
+                            <option value="16">Animation</option>
+                            <option value="35">Comedy</option>
+                            <option value="80">Crime</option>
+                            <option value="99">Documentary</option>
+                            <option value="18">Drama</option>
+                            <option value="10751">Family</option>
+                            <option value="14">Fantasy</option>
+                            <option value="36">History</option>
+                            <option value="27">Horror</option>
+                            <option value="10402">Music</option>
+                            <option value="9648">Mystery</option>
+                            <option value="10749">Romance</option>
+                            <option value="878">Science Fiction</option>
+                            <option value="10770">TV Movie</option>
+                            <option value="53">Thriller</option>
+                            <option value="10752">War</option>
+                            <option value="37">Western</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Number of Items</label>
                         <input type="number" id="genre-count" min="1" max="100" value="20">
                     </div>
-                    <button class="btn btn-primary" onclick="generateByGenre()">
-                        <span class="loading" id="genre-loading" style="display: none;"></span>
-                        Generate by Genre
-                    </button>
-                    <button class="btn btn-secondary" onclick="testGeneration()" style="margin-top: 10px;">
-                        🧪 Test Generation (Debug)
-                    </button>
-                    <div id="genre-progress" style="margin-top: 15px; display: none;">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="genre-progress-fill"></div>
-                        </div>
-                        <div class="progress-text" id="genre-progress-text">Processing...</div>
-                    </div>
+                    <button class="btn btn-primary" onclick="generateByGenre()">Generate by Genre</button>
                 </div>
             </div>
         </div>
+
         <!-- Data Management Tab -->
         <div id="data-management" class="tab-content">
             <div class="grid">
@@ -1714,31 +1195,6 @@
                         <button class="btn btn-primary" onclick="exportData()">Export Current Data</button>
                         <button class="btn btn-warning" onclick="exportSample()">Export Sample Format</button>
                     </div>
-                    
-                    <div class="form-group">
-                        <h3>📤 GitHub Upload</h3>
-                        <div class="github-upload-section">
-                            <div class="form-group">
-                                <label for="github-token">GitHub Personal Access Token:</label>
-                                <input type="password" id="github-token" placeholder="Enter your GitHub token" class="form-control">
-                                <small class="form-text">Get your token from <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings</a></small>
-                            </div>
-                            <div class="form-group">
-                                <button class="btn btn-success" onclick="setGitHubToken()">🔑 Set Token</button>
-                                <button class="btn btn-info" onclick="checkGitHubToken()">🔍 Check Token</button>
-                                <button class="btn btn-secondary" onclick="debugCurrentData()">🔍 Debug Data</button>
-                                <button class="btn btn-accent" onclick="exportToGitHub()">📤 Upload to GitHub</button>
-                            </div>
-                            
-                            <!-- GitHub Upload Progress -->
-                            <div id="github-upload-progress" class="progress-bar" style="display: none; margin-top: 15px;">
-                                <div class="progress-fill" id="github-upload-progress-fill" style="width: 0%;"></div>
-                            </div>
-                            <div id="github-upload-progress-text" style="display: none; margin-top: 8px; font-size: 0.9rem; color: var(--text-secondary); text-align: center;"></div>
-                            
-                            <div class="github-status" id="github-status"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="card">
@@ -1746,15 +1202,8 @@
                     <div class="form-group">
                         <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
                         <button class="btn btn-warning" onclick="removeDuplicates()">Remove Duplicates</button>
-                    </div>
-                    <div class="form-group">
-                        <button class="btn btn-secondary" onclick="migrateStorage()" title="Move data between localStorage and IndexedDB storage systems">🔄 Migrate Storage</button>
-                        <button class="btn btn-secondary" onclick="optimizeStorage()" title="Remove entries with missing titles or empty server lists (WARNING: May remove valid content if data structure is unexpected)">⚡ Optimize Storage</button>
-                    </div>
-                    <div class="info-box" style="margin-top: 15px; padding: 15px; background: var(--surface-light); border-radius: 8px; border-left: 4px solid var(--warning);">
-                        <h4>📝 Function Explanations:</h4>
-                        <p><strong>🔄 Migrate Storage:</strong> Safely moves your data between localStorage and IndexedDB. This doesn't delete content, just changes where it's stored.</p>
-                        <p><strong>⚡ Optimize Storage:</strong> Removes entries that appear to have missing titles or no servers. <em>Use with caution</em> - this may delete valid TV series if their data structure is different from expected format.</p>
+                        <button class="btn btn-secondary" onclick="migrateStorage()">🔄 Migrate Storage</button>
+                        <button class="btn btn-secondary" onclick="optimizeStorage()">⚡ Optimize Storage</button>
                     </div>
                     <div class="form-group">
                         <label>Current Data Count</label>
@@ -1779,13 +1228,6 @@
                     <h2>🔗 Auto-Embed Server Management</h2>
                     <div class="form-group">
                         <label>Auto-Embed Configuration</label>
-                        <div style="margin-bottom: 15px;">
-                            <button class="btn btn-secondary btn-small" onclick="toggleAllEmbedServers(true)">✅ Enable All Servers</button>
-                            <button class="btn btn-secondary btn-small" onclick="toggleAllEmbedServers(false)">❌ Disable All Servers</button>
-                            <button class="btn btn-accent btn-small" onclick="enableRecommendedServers()">⭐ Enable Recommended Only</button>
-                            <button class="btn btn-secondary btn-small" onclick="checkEmbedProvidersStatus()">🩺 Check Provider Status</button>
-                        </div>
-                        <div id="provider-status" class="status info" style="display: none; margin-bottom: 12px;"></div>
                         <div class="auto-embed-config">
                             <div class="embed-option">
                                 <input type="checkbox" id="auto-vidsrc" checked>
@@ -1809,204 +1251,6 @@
                                 <input type="checkbox" id="auto-multiembed" checked>
                                 <label for="auto-multiembed">MultiEmbed.mov Auto-Embed</label>
                                 <select id="multiembed-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-embedsu" checked>
-                                <label for="auto-embedsu">Embed.su Auto-Embed</label>
-                                <select id="embedsu-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-vidsrcme" checked>
-                                <label for="auto-vidsrcme">VidSrc.me Auto-Embed</label>
-                                <select id="vidsrcme-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-autoembed" checked>
-                                <label for="auto-autoembed">AutoEmbed.cc Auto-Embed</label>
-                                <select id="autoembed-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-smashystream" checked>
-                                <label for="auto-smashystream">SmashyStream Auto-Embed</label>
-                                <select id="smashystream-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-vidsrcto" checked>
-                                <label for="auto-vidsrcto">VidSrc.to Auto-Embed</label>
-                                <select id="vidsrcto-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-vidsrcxyz" checked>
-                                <label for="auto-vidsrcxyz">VidSrc.xyz Auto-Embed</label>
-                                <select id="vidsrcxyz-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-embedsoap" checked>
-                                <label for="auto-embedsoap">EmbedSoap Auto-Embed</label>
-                                <select id="embedsoap-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-moviesapi" checked>
-                                <label for="auto-moviesapi">MoviesAPI Auto-Embed</label>
-                                <select id="moviesapi-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-dbgo" checked>
-                                <label for="auto-dbgo">DBGO.fun Auto-Embed</label>
-                                <select id="dbgo-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-flixhq" checked>
-                                <label for="auto-flixhq">FlixHQ Auto-Embed</label>
-                                <select id="flixhq-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-gomovies" checked>
-                                <label for="auto-gomovies">GoMovies Auto-Embed</label>
-                                <select id="gomovies-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-showbox" checked>
-                                <label for="auto-showbox">ShowBox Auto-Embed</label>
-                                <select id="showbox-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-primewire" checked>
-                                <label for="auto-primewire">PrimeWire Auto-Embed</label>
-                                <select id="primewire-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-hdtoday" checked>
-                                <label for="auto-hdtoday">HDToday Auto-Embed</label>
-                                <select id="hdtoday-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-vidcloud" checked>
-                                <label for="auto-vidcloud">VidCloud Auto-Embed</label>
-                                <select id="vidcloud-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-streamwish" checked>
-                                <label for="auto-streamwish">StreamWish Auto-Embed</label>
-                                <select id="streamwish-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-doodstream" checked>
-                                <label for="auto-doodstream">DoodStream Auto-Embed</label>
-                                <select id="doodstream-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-streamtape" checked>
-                                <label for="auto-streamtape">StreamTape Auto-Embed</label>
-                                <select id="streamtape-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-mixdrop" checked>
-                                <label for="auto-mixdrop">MixDrop Auto-Embed</label>
-                                <select id="mixdrop-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-filemoon" checked>
-                                <label for="auto-filemoon">FileMoon Auto-Embed</label>
-                                <select id="filemoon-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-upstream" checked>
-                                <label for="auto-upstream">UpStream Auto-Embed</label>
-                                <select id="upstream-quality">
-                                    <option value="1080p">1080p</option>
-                                    <option value="720p">720p</option>
-                                    <option value="480p">480p</option>
-                                </select>
-                            </div>
-                            <div class="embed-option">
-                                <input type="checkbox" id="auto-vidlink" checked>
-                                <label for="auto-vidlink">VidLink.pro Auto-Embed</label>
-                                <select id="vidlink-quality">
                                     <option value="1080p">1080p</option>
                                     <option value="720p">720p</option>
                                     <option value="480p">480p</option>
@@ -2043,22 +1287,12 @@
                         <div id="selected-content-info" class="status info" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                                        <label>Apply Auto-Embed to All Content</label>
-                <div class="auto-embed-actions">
-                    <button class="btn btn-warning" onclick="applyAutoEmbedToMovies()">Apply to All Movies</button>
-                    <button class="btn btn-warning" onclick="applyAutoEmbedToSeries()">Apply to All TV Series</button>
-                    <button class="btn btn-success" onclick="applyAutoEmbedToAll()">Apply to All Content</button>
-                </div>
-                
-                <label>Missing Content Auto-Generation</label>
-                <div class="auto-embed-actions">
-                    <button class="btn btn-accent" onclick="detectAndGenerateMissingContent()">
-                        🔄 Auto-Generate Missing Seasons & Episodes
-                    </button>
-                    <small style="display: block; margin-top: 8px; color: var(--text-secondary);">
-                        Automatically detects and generates missing seasons/episodes with metadata and sources (excluding vidjoy, vidsrc, multiembed)
-                    </small>
-                </div>
+                        <label>Apply Auto-Embed to All Content</label>
+                        <div class="auto-embed-actions">
+                            <button class="btn btn-warning" onclick="applyAutoEmbedToMovies()">Apply to All Movies</button>
+                            <button class="btn btn-warning" onclick="applyAutoEmbedToSeries()">Apply to All TV Series</button>
+                            <button class="btn btn-success" onclick="applyAutoEmbedToAll()">Apply to All Content</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <div id="auto-embed-status" class="status info" style="display: none;"></div>
@@ -2113,167 +1347,15 @@
             <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
         </div>
     </div>
+
     <script>
-        // Configuration - Multiple API Keys for Backup
-        const TMDB_API_KEYS = {
-            'primary': 'ec926176bf467b3f7735e3154238c161',
-            'backup1': 'bb51e18edb221e87a05f90c2eb456069',
-            'backup2': '4a1f2e8c9d3b5a7e6f9c2d1e8b4a5c3f',
-            'backup3': '7d9a2b1e4f6c8e5a3b7d9f2e1c4a6b8d'
-        };
-        
-        let currentApiKey = 'primary'; // Default to primary key
+        // Configuration
+        const TMDB_API_KEY = 'ec926176bf467b3f7735e3154238c161';
         const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
         const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
         const VIDSRC_BASE = 'https://vidsrc.net/embed';
         const VIDJOY_BASE = 'https://vidjoy.pro/embed';
         const MULTIEMBED_BASE = 'https://multiembed.mov/directstream.php';
-        const EMBEDSU_BASE = 'https://embed.su/embed';
-        const VIDSRCME_BASE = 'https://vidsrc.me/embed';
-        const AUTOEMBED_BASE = 'https://player.autoembed.cc/embed';
-        const SMASHYSTREAM_BASE = 'https://player.smashy.stream/movie';
-        const VIDSRCTO_BASE = 'https://vidsrc.to/embed';
-        const VIDSRCXYZ_BASE = 'https://vidsrc.xyz/embed';
-        const EMBEDSOAP_BASE = 'https://www.embedsoap.com/embed';
-        const MOVIESAPI_BASE = 'https://moviesapi.club/movie';
-        const SUPEREMBED_BASE = 'https://multiembed.mov/directstream.php';
-        const DBGO_BASE = 'https://dbgo.fun/movie';
-        const NONTONFILM_BASE = 'https://tv.nontonguru.info/embed';
-        const FLIXHQ_BASE = 'https://flixhq.to/watch';
-        const GOMOVIES_BASE = 'https://gomovies.sx/watch';
-        const SHOWBOX_BASE = 'https://www.showbox.media/embed';
-        const PRIMEWIRE_BASE = 'https://primewire.mx/embed';
-        const CATAZ_BASE = 'https://cataz.net/embed';
-        const HDTODAY_BASE = 'https://hdtoday.tv/embed';
-        const VIDLINK_BASE = 'https://vidlink.pro/movie';
-        const STREAMLARE_BASE = 'https://streamlare.com/e';
-        const FILEMOON_BASE = 'https://filemoon.sx/e';
-        const STREAMHUB_BASE = 'https://streamhub.to/e';
-        const VIDCLOUD_BASE = 'https://vidcloud.to/embed';
-        const STREAMWISH_BASE = 'https://streamwish.to/e';
-        const DOODSTREAM_BASE = 'https://doodstream.com/e';
-        const UPSTREAM_BASE = 'https://upstream.to';
-        const STREAMTAPE_BASE = 'https://streamtape.com/e';
-        const MIXDROP_BASE = 'https://mixdrop.co/e';
-        
-        // Get current TMDB API key
-        function getTMDBApiKey() {
-            return TMDB_API_KEYS[currentApiKey] || TMDB_API_KEYS.primary;
-        }
-        
-        // Regional drama configurations
-        const REGIONAL_CONFIGS = {
-            kdrama: {
-                name: 'K-Drama',
-                origin_country: 'KR',
-                language: 'ko',
-                genres: [18], // Drama genre ID
-                keywords: ['korean drama', 'k-drama', 'kdrama']
-            },
-            cdrama: {
-                name: 'C-Drama',
-                origin_country: 'CN',
-                language: 'zh',
-                genres: [18],
-                keywords: ['chinese drama', 'c-drama', 'cdrama']
-            },
-            jdrama: {
-                name: 'J-Drama',
-                origin_country: 'JP',
-                language: 'ja',
-                genres: [18],
-                keywords: ['japanese drama', 'j-drama', 'jdrama']
-            },
-            pinoy: {
-                name: 'Pinoy Series',
-                origin_country: 'PH',
-                language: 'tl',
-                genres: [18],
-                keywords: ['filipino series', 'pinoy series', 'philippine drama']
-            },
-            thai: {
-                name: 'Thai Drama',
-                origin_country: 'TH',
-                language: 'th',
-                genres: [18],
-                keywords: ['thai drama', 'thai series']
-            },
-            indian: {
-                name: 'Indian Series',
-                origin_country: 'IN',
-                language: 'hi',
-                genres: [18],
-                keywords: ['indian series', 'hindi series', 'bollywood series']
-            },
-            turkish: {
-                name: 'Turkish Drama',
-                origin_country: 'TR',
-                language: 'tr',
-                genres: [18],
-                keywords: ['turkish drama', 'turkish series']
-            },
-            'korean-variety': {
-                name: 'Korean Variety',
-                origin_country: 'KR',
-                language: 'ko',
-                genres: [10764], // Reality TV genre ID
-                keywords: ['korean variety', 'variety show', 'korean entertainment']
-            }
-        };
-        
-        // Switch API key
-        function switchApiKey() {
-            const select = document.getElementById('api-key-select');
-            currentApiKey = select.value;
-            updateApiDropdown();
-            showStatus('info', `Switched to API key: ${currentApiKey}`);
-        }
-        
-        // Update API dropdown display
-        function updateApiDropdown() {
-            const select = document.getElementById('api-key-select');
-            const status = document.getElementById('current-api-status');
-            
-            if (select) {
-                select.value = currentApiKey;
-            }
-            
-            if (status) {
-                const keyName = currentApiKey.charAt(0).toUpperCase() + currentApiKey.slice(1);
-                status.textContent = `${keyName} (Active)`;
-            }
-        }
-        
-        // Toggle all embed servers on/off
-        function toggleAllEmbedServers(enable) {
-            const checkboxes = document.querySelectorAll('.auto-embed-config input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = enable;
-            });
-            updateAutoEmbedStatus();
-            showStatus('info', enable ? 'All embed servers enabled' : 'All embed servers disabled');
-        }
-        
-        // Enable only recommended servers (high reliability and speed)
-        function enableRecommendedServers() {
-            // First disable all
-            toggleAllEmbedServers(false);
-            
-            // Enable recommended servers
-            const recommended = [
-                'auto-vidsrc', 'auto-vidsrcto', 'auto-embedsu', 'auto-vidsrcme',
-                'auto-multiembed', 'auto-flixhq', 'auto-hdtoday', 'auto-vidcloud',
-                'auto-streamwish', 'auto-mixdrop', 'auto-filemoon', 'auto-vidlink'
-            ];
-            
-            recommended.forEach(id => {
-                const checkbox = document.getElementById(id);
-                if (checkbox) checkbox.checked = true;
-            });
-            
-            updateAutoEmbedStatus();
-            showStatus('success', 'Recommended embed servers enabled');
-        }
 
         // Global data storage
         let currentData = {
@@ -2298,46 +1380,22 @@
 
         let nextId = 1;
 
-                         // Initialize
-        document.addEventListener('DOMContentLoaded', async function() {
-            showStatus('info', 'Loading saved data...');
-            await loadSavedData();
-                        updateDataStats();
+                 // Initialize
+         document.addEventListener('DOMContentLoaded', async function() {
+             showStatus('info', 'Loading saved data...');
+             await loadSavedData();
+                         updateDataStats();
             updatePreview();
             updateAutoEmbedStatus();
-            updateApiDropdown(); // Initialize API dropdown
-            handleSearchTypeChange(); // Initialize search type
             refreshContentCheckboxes();
             showStatus('success', 'Application loaded successfully!');
              
-                         // Add event listeners for auto-embed configuration
-            const autoEmbedElements = [
-                'auto-vidsrc', 'vidsrc-quality',
-                'auto-vidjoy', 'vidjoy-quality', 
-                'auto-multiembed', 'multiembed-quality',
-                'auto-embedsu', 'embedsu-quality',
-                'auto-vidsrcme', 'vidsrcme-quality',
-                'auto-autoembed', 'autoembed-quality',
-                'auto-smashystream', 'smashystream-quality',
-                'auto-vidsrcto', 'vidsrcto-quality',
-                'auto-vidsrcxyz', 'vidsrcxyz-quality',
-                'auto-embedsoap', 'embedsoap-quality',
-                'auto-moviesapi', 'moviesapi-quality',
-                'auto-dbgo', 'dbgo-quality',
-                'auto-flixhq', 'flixhq-quality',
-                'auto-gomovies', 'gomovies-quality',
-                'auto-showbox', 'showbox-quality',
-                'auto-primewire', 'primewire-quality',
-                'auto-hdtoday', 'hdtoday-quality',
-                'auto-vidcloud', 'vidcloud-quality',
-                'auto-streamwish', 'streamwish-quality',
-                'auto-doodstream', 'doodstream-quality',
-                'auto-streamtape', 'streamtape-quality',
-                'auto-mixdrop', 'mixdrop-quality',
-                'auto-filemoon', 'filemoon-quality',
-                'auto-upstream', 'upstream-quality',
-                'auto-vidlink', 'vidlink-quality'
-            ];
+             // Add event listeners for auto-embed configuration
+             const autoEmbedElements = [
+                 'auto-vidsrc', 'vidsrc-quality',
+                 'auto-vidjoy', 'vidjoy-quality', 
+                 'auto-multiembed', 'multiembed-quality'
+             ];
              
              autoEmbedElements.forEach(id => {
                  const element = document.getElementById(id);
@@ -2582,7 +1640,7 @@
         // TMDB API functions
         async function fetchTMDB(endpoint, params = {}) {
             const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
-            url.searchParams.append('api_key', getTMDBApiKey());
+            url.searchParams.append('api_key', TMDB_API_KEY);
             
             Object.entries(params).forEach(([key, value]) => {
                 url.searchParams.append(key, value);
@@ -2590,13 +1648,7 @@
 
             try {
                 const response = await fetch(url);
-                if (!response.ok) {
-                    // If rate limited or API key issue, try switching to backup
-                    if (response.status === 429 || response.status === 401) {
-                        return await retryWithBackupApi(endpoint, params);
-                    }
-                    throw new Error(`TMDB API error: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`TMDB API error: ${response.status}`);
                 return await response.json();
             } catch (error) {
                 console.error('TMDB fetch error:', error);
@@ -2604,313 +1656,10 @@
                 return null;
             }
         }
-        
-        // Retry with backup API keys
-        async function retryWithBackupApi(endpoint, params = {}) {
-            const apiKeys = Object.keys(TMDB_API_KEYS);
-            const currentIndex = apiKeys.indexOf(currentApiKey);
-            
-            for (let i = 1; i < apiKeys.length; i++) {
-                const nextIndex = (currentIndex + i) % apiKeys.length;
-                const nextKey = apiKeys[nextIndex];
-                
-                try {
-                    const url = new URL(`${TMDB_BASE_URL}${endpoint}`);
-                    url.searchParams.append('api_key', TMDB_API_KEYS[nextKey]);
-                    
-                    Object.entries(params).forEach(([key, value]) => {
-                        url.searchParams.append(key, value);
-                    });
-                    
-                    const response = await fetch(url);
-                    if (response.ok) {
-                        currentApiKey = nextKey; // Switch to working key
-                        updateApiDropdown();
-                        showStatus('success', `Switched to backup API key: ${nextKey}`);
-                        return await response.json();
-                    }
-                } catch (error) {
-                    continue; // Try next key
-                }
-            }
-            
-            throw new Error('All API keys exhausted');
-        }
 
-        // Handle search type change
-        function handleSearchTypeChange() {
-            const searchType = document.getElementById('search-type').value;
-            const searchInputGroup = document.getElementById('search-input-group');
-            const regionalBrowseGroup = document.getElementById('regional-browse-group');
-            const yearFilter = document.getElementById('year-filter');
-            
-            if (searchType === 'search') {
-                // Show search mode
-                searchInputGroup.style.display = 'block';
-                regionalBrowseGroup.style.display = 'none';
-                clearSearchResults();
-            } else if (REGIONAL_CONFIGS[searchType]) {
-                // Show regional browse mode
-                searchInputGroup.style.display = 'none';
-                regionalBrowseGroup.style.display = 'block';
-                
-                // Reset year selection and clear results
-                yearFilter.value = '';
-                clearSearchResults();
-                
-                // Show instruction to select year
-                const resultsContainer = document.getElementById('search-results');
-                if (resultsContainer) {
-                    resultsContainer.innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                            <h3>🎭 ${REGIONAL_CONFIGS[searchType].name} Browser</h3>
-                            <p>Please select a year above to browse ${REGIONAL_CONFIGS[searchType].name} content from that period.</p>
-                            <small>Individual years (1995-2024) or comprehensive decade collections available.<br>
-                            No limits - all available content will be shown!</small>
-                        </div>
-                    `;
-                }
-            }
-        }
-        
-        // Load all content for a specific region
-        async function loadAllRegionalContent(regionType) {
-            const config = REGIONAL_CONFIGS[regionType];
-            if (!config) return;
-            
-            showSearchLoading(true);
-            clearSearchResults();
-            
-            try {
-                let allResults = [];
-                
-                // Fetch content from recent years (2015-2024)
-                for (let year = 2024; year >= 2015; year--) {
-                    const yearResults = await fetchRegionalContentByYear(regionType, year);
-                    if (yearResults && yearResults.length > 0) {
-                        allResults = [...allResults, ...yearResults];
-                    }
-                    
-                    // Add small delay to avoid rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-                
-                if (allResults.length > 0) {
-                    displaySearchResults(allResults, config.name);
-                    showStatus('success', `Found ${allResults.length} ${config.name} titles`);
-                } else {
-                    showStatus('info', `No ${config.name} content found`);
-                }
-            } catch (error) {
-                console.error('Error loading regional content:', error);
-                showStatus('error', `Error loading ${config.name} content`);
-            } finally {
-                showSearchLoading(false);
-            }
-        }
-        
-        // Load content for specific region and year
-        async function loadRegionalContent() {
-            const searchType = document.getElementById('search-type').value;
-            const year = document.getElementById('year-filter').value;
-            const contentType = document.getElementById('regional-content-type').value;
-            
-            if (!year || !REGIONAL_CONFIGS[searchType]) return;
-            
-            showLoading('search-loading', true);
-            clearSearchResults();
-            
-            try {
-                let results = [];
-                let titleSuffix = '';
-                const contentLabel = contentType === 'tv' ? 'Series/Dramas' : 
-                                  contentType === 'movie' ? 'Movies' : 'Movies & Series';
-                
-                if (year === 'all-recent') {
-                    // Load content from 2020-2024
-                    titleSuffix = `${contentLabel} (2020-2024)`;
-                    for (let y = 2024; y >= 2020; y--) {
-                        const yearResults = await fetchRegionalContentByYear(searchType, y, contentType);
-                        if (yearResults && yearResults.length > 0) {
-                            results = [...results, ...yearResults];
-                        }
-                        // Small delay to avoid rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
-                } else if (year === 'all-2010s') {
-                    // Load content from 2010-2019
-                    titleSuffix = `${contentLabel} (2010-2019)`;
-                    for (let y = 2019; y >= 2010; y--) {
-                        const yearResults = await fetchRegionalContentByYear(searchType, y, contentType);
-                        if (yearResults && yearResults.length > 0) {
-                            results = [...results, ...yearResults];
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 150));
-                    }
-                } else if (year === 'all-2000s') {
-                    // Load content from 2000-2009
-                    titleSuffix = `${contentLabel} (2000-2009)`;
-                    for (let y = 2009; y >= 2000; y--) {
-                        const yearResults = await fetchRegionalContentByYear(searchType, y, contentType);
-                        if (yearResults && yearResults.length > 0) {
-                            results = [...results, ...yearResults];
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 150));
-                    }
-                } else if (year === 'all-classic') {
-                    // Load content from 1990-1999
-                    titleSuffix = `${contentLabel} (1990-1999)`;
-                    for (let y = 1999; y >= 1990; y--) {
-                        const yearResults = await fetchRegionalContentByYear(searchType, y, contentType);
-                        if (yearResults && yearResults.length > 0) {
-                            results = [...results, ...yearResults];
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 150));
-                    }
-                } else if (year === 'all-time') {
-                    // Load ALL content from 1990-2024
-                    titleSuffix = `${contentLabel} (All Time 1990-2024)`;
-                    for (let y = 2024; y >= 1990; y--) {
-                        const yearResults = await fetchRegionalContentByYear(searchType, y, contentType);
-                        if (yearResults && yearResults.length > 0) {
-                            results = [...results, ...yearResults];
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                } else {
-                    // Load content for specific year
-                    titleSuffix = `${contentLabel} (${year})`;
-                    results = await fetchRegionalContentByYear(searchType, year, contentType);
-                }
-                
-                if (results && results.length > 0) {
-                    // Remove duplicates based on TMDB ID
-                    const uniqueResults = results.filter((item, index, self) => 
-                        index === self.findIndex(t => t.id === item.id)
-                    );
-                    
-                    // Sort by popularity and first air date
-                    uniqueResults.sort((a, b) => {
-                        const dateA = new Date(a.first_air_date || '1900-01-01');
-                        const dateB = new Date(b.first_air_date || '1900-01-01');
-                        // Primary sort by year (newest first), secondary by popularity
-                        if (dateB.getFullYear() !== dateA.getFullYear()) {
-                            return dateB.getFullYear() - dateA.getFullYear();
-                        }
-                        return (b.popularity || 0) - (a.popularity || 0);
-                    });
-                    
-                    displaySearchResults(uniqueResults, `${REGIONAL_CONFIGS[searchType].name} ${titleSuffix}`);
-                    showStatus('success', `Found ${uniqueResults.length} ${REGIONAL_CONFIGS[searchType].name} titles ${titleSuffix}`);
-                } else {
-                    showStatus('info', `No ${REGIONAL_CONFIGS[searchType].name} content found ${titleSuffix}`);
-                }
-            } catch (error) {
-                console.error('Error loading regional content:', error);
-                showStatus('error', 'Error loading content');
-            } finally {
-                showLoading('search-loading', false);
-            }
-        }
-        
-        // Fetch regional content by year - comprehensive search across multiple pages
-        async function fetchRegionalContentByYear(regionType, year, contentType = 'tv') {
-            const config = REGIONAL_CONFIGS[regionType];
-            if (!config) return [];
-            
-            try {
-                let allResults = [];
-                
-                // Fetch both movies and TV shows if contentType is 'both'
-                const typesToFetch = contentType === 'both' ? ['tv', 'movie'] : [contentType];
-                
-                for (const type of typesToFetch) {
-                    let currentPage = 1;
-                    let totalPages = 1;
-                    
-                    // Fetch all pages of results for this content type
-                    do {
-                        const params = {
-                            with_origin_country: config.origin_country,
-                            with_original_language: config.language,
-                            sort_by: 'popularity.desc',
-                            page: currentPage
-                        };
-                        
-                        // Use appropriate date field for movies vs TV shows
-                        if (type === 'movie') {
-                            params.primary_release_year = year;
-                        } else {
-                            params.first_air_date_year = year;
-                        }
-                        
-                        // Add genre filter if specified
-                        if (config.genres && config.genres.length > 0) {
-                            params.with_genres = config.genres.join(',');
-                        }
-                        
-                        const data = await fetchTMDB(`/discover/${type}`, params);
-                        
-                        if (data && data.results) {
-                            // Add content type to each result for identification
-                            const resultsWithType = data.results.map(item => ({
-                                ...item,
-                                content_type: type
-                            }));
-                            
-                            allResults = [...allResults, ...resultsWithType];
-                            totalPages = data.total_pages || 1;
-                            currentPage++;
-                            
-                            // Small delay between requests to be nice to the API
-                            if (currentPage <= totalPages) {
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            }
-                        } else {
-                            break;
-                        }
-                        
-                        // Fetch up to 10 pages to get comprehensive results
-                    } while (currentPage <= totalPages && currentPage <= 10);
-                    
-                    // Small delay between content types
-                    if (typesToFetch.length > 1) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    }
-                }
-                
-                if (allResults.length > 0) {
-                    // Sort by release date (newest first), then by popularity
-                    return allResults.sort((a, b) => {
-                        const dateA = new Date(a.first_air_date || a.release_date || '1900-01-01');
-                        const dateB = new Date(b.first_air_date || b.release_date || '1900-01-01');
-                        
-                        // Primary sort by date
-                        if (dateB.getTime() !== dateA.getTime()) {
-                            return dateB - dateA;
-                        }
-                        
-                        // Secondary sort by popularity
-                        return (b.popularity || 0) - (a.popularity || 0);
-                    });
-                }
-                
-                return [];
-            } catch (error) {
-                console.error(`Error fetching ${regionType} ${contentType} content for ${year}:`, error);
-                return [];
-            }
-        }
         async function searchTMDB() {
-            const searchType = document.getElementById('search-type').value;
-            
-            // Only handle search mode here
-            if (searchType !== 'search') {
-                return;
-            }
-            
             const query = document.getElementById('tmdb-search').value.trim();
-            const type = document.getElementById('search-subtype').value;
+            const type = document.getElementById('search-type').value;
             
             if (!query) {
                 showStatus('warning', 'Please enter a search query');
@@ -2919,35 +1668,19 @@
 
             showLoading('search-loading', true);
             
-            try {
-                const endpoint = type === 'multi' ? '/search/multi' : `/search/${type}`;
-                const results = await fetchTMDB(endpoint, { query });
-                
-                if (results && results.results && results.results.length > 0) {
-                    displaySearchResults(results.results, `Search Results for "${query}"`);
-                    showStatus('success', `Found ${results.results.length} results for "${query}"`);
-                } else {
-                    showStatus('warning', 'No results found');
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                showStatus('error', 'Search failed. Please try again.');
-            } finally {
-                showLoading('search-loading', false);
-            }
-        }
-        
-        // Helper functions for search UI
-        function clearSearchResults() {
-            const resultsContainer = document.getElementById('search-results');
-            if (resultsContainer) {
-                resultsContainer.innerHTML = '';
+            const endpoint = type === 'multi' ? '/search/multi' : `/search/${type}`;
+            const results = await fetchTMDB(endpoint, { query });
+            
+            showLoading('search-loading', false);
+            
+            if (results && results.results) {
+                displaySearchResults(results.results);
             }
         }
 
-        function displaySearchResults(results, title = 'Search Results') {
+        function displaySearchResults(results) {
             const container = document.getElementById('search-results');
-            container.innerHTML = `<h3>${title}</h3>`;
+            container.innerHTML = '';
 
             results.slice(0, 20).forEach(item => {
                 const div = document.createElement('div');
@@ -2955,10 +1688,7 @@
                 
                 // Determine media type with robust detection
                 let mediaType;
-                if (item.content_type) {
-                    // Regional search provides content_type
-                    mediaType = item.content_type;
-                } else if (item.media_type) {
+                if (item.media_type) {
                     // Multi search provides media_type
                     mediaType = item.media_type;
                 } else {
@@ -2980,7 +1710,7 @@
                     <img src="${poster}" alt="${title}" loading="lazy">
                     <div class="info">
                         <div class="title">${title}</div>
-                        <div class="meta">${year} • ${mediaType === 'movie' ? '🎬' : '📺'} ${mediaType.toUpperCase()} • ID: ${item.id}</div>
+                        <div class="meta">${year} • ${mediaType.toUpperCase()} • ID: ${item.id}</div>
                         <button class="btn btn-primary btn-small" onclick="generateFromTMDB('${generatorType}', ${item.id})">
                             Generate
                         </button>
@@ -3100,7 +1830,7 @@
                 Duration: movie.duration,
                 Year: parseInt(movie.year),
                 Servers: movie.sources.map(source => ({
-                    name: source.name || source.title,
+                    name: source.title,
                     url: source.url
                 }))
             };
@@ -3120,367 +1850,6 @@
             }
             
             await saveData();
-        }
-
-        // Missing Content Detection and Auto-Generation
-        async function detectAndGenerateMissingContent() {
-            const seriesCategory = currentData.Categories.find(cat => cat.MainCategory === "TV Series");
-            if (!seriesCategory) {
-                showStatus('error', 'TV Series category not found');
-                return;
-            }
-
-            let totalMissingGenerated = 0;
-            const processingStatus = document.getElementById('auto-embed-status') || createStatusElement();
-            
-            processingStatus.style.display = 'block';
-            processingStatus.className = 'status info';
-            processingStatus.innerHTML = 'Detecting missing seasons and episodes...';
-
-            for (const entry of seriesCategory.Entries) {
-                try {
-                    // Extract TMDB ID from existing sources (if available)
-                    const tmdbId = extractTMDBIdFromEntry(entry);
-                    if (!tmdbId) {
-                        console.log(`Skipping ${entry.Title}: No TMDB ID found`);
-                        continue;
-                    }
-
-                    processingStatus.innerHTML = `Processing: ${entry.Title}...`;
-                    
-                    // Fetch complete series data from TMDB
-                    const seriesData = await fetchTMDB(`/tv/${tmdbId}`);
-                    if (!seriesData) continue;
-
-                    // Get all seasons from TMDB (including season 0 for specials)
-                    const allSeasons = seriesData.seasons || [];
-                    const existingSeasons = new Set(entry.Seasons?.map(s => s.Season) || []);
-                    
-                    let missingGenerated = 0;
-
-                    for (const tmdbSeason of allSeasons) {
-                        if (!existingSeasons.has(tmdbSeason.season_number)) {
-                            // Missing season - generate it
-                            console.log(`Generating missing season ${tmdbSeason.season_number} for ${entry.Title}`);
-                            const newSeason = await generateMissingSeason(tmdbId, tmdbSeason.season_number, entry);
-                            if (newSeason) {
-                                if (!entry.Seasons) entry.Seasons = [];
-                                entry.Seasons.push(newSeason);
-                                missingGenerated++;
-                            }
-                        } else {
-                            // Season exists, check for missing episodes
-                            const existingSeason = entry.Seasons.find(s => s.Season === tmdbSeason.season_number);
-                            if (existingSeason) {
-                                const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${tmdbSeason.season_number}`);
-                                if (seasonData) {
-                                    const allEpisodes = seasonData.episodes || [];
-                                    const existingEpisodes = new Set(existingSeason.Episodes?.map(e => e.Episode) || []);
-                                    
-                                    for (const tmdbEpisode of allEpisodes) {
-                                        if (!existingEpisodes.has(tmdbEpisode.episode_number)) {
-                                            // Missing episode - generate it
-                                            console.log(`Generating missing episode S${tmdbSeason.season_number}E${tmdbEpisode.episode_number} for ${entry.Title}`);
-                                            const newEpisode = await generateMissingEpisode(tmdbId, tmdbSeason.season_number, tmdbEpisode, entry);
-                                            if (newEpisode) {
-                                                if (!existingSeason.Episodes) existingSeason.Episodes = [];
-                                                existingSeason.Episodes.push(newEpisode);
-                                                // Sort episodes by episode number
-                                                existingSeason.Episodes.sort((a, b) => a.Episode - b.Episode);
-                                                missingGenerated++;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Sort seasons by season number
-                    if (entry.Seasons) {
-                        entry.Seasons.sort((a, b) => a.Season - b.Season);
-                    }
-                    
-                    totalMissingGenerated += missingGenerated;
-                    
-                    // Small delay to prevent API rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                } catch (error) {
-                    console.error(`Error processing ${entry.Title}:`, error);
-                    continue;
-                }
-            }
-
-            await saveData();
-            
-            processingStatus.className = 'status success';
-            processingStatus.innerHTML = `✅ Auto-generation complete! Generated ${totalMissingGenerated} missing seasons/episodes`;
-            
-            setTimeout(() => {
-                processingStatus.style.display = 'none';
-            }, 5000);
-
-            showStatus('success', `Generated ${totalMissingGenerated} missing seasons and episodes`);
-        }
-
-        // Extract TMDB ID from entry sources
-        function extractTMDBIdFromEntry(entry) {
-            // Look for TMDB ID in VidSrc, VidJoy, MultiEmbed, and other embed URLs
-            for (const season of entry.Seasons || []) {
-                for (const episode of season.Episodes || []) {
-                    for (const server of episode.Servers || []) {
-                        const url = server.url;
-                        if (!url) continue;
-                        
-                        // VidSrc format: https://vidsrc.net/embed/tv/TMDB_ID/season/episode
-                        let match = url.match(/vidsrc\.net\/embed\/tv\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // VidJoy format: https://vidjoy.pro/embed/tv/TMDB_ID/season/episode
-                        match = url.match(/vidjoy\.pro\/embed\/tv\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // MultiEmbed format: video_id=TMDB_ID
-                        match = url.match(/video_id=(\d+)/);
-                        if (match) return match[1];
-                        
-                        // Embed.su format: https://embed.su/embed/tv/TMDB_ID/season/episode
-                        match = url.match(/embed\.su\/embed\/tv\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // VidSrc.me format: https://vidsrc.me/embed/tv/TMDB_ID/season/episode
-                        match = url.match(/vidsrc\.me\/embed\/tv\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // AutoEmbed format: https://player.autoembed.cc/embed/tv/TMDB_ID/season/episode
-                        match = url.match(/autoembed\.cc\/embed\/tv\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // SmashyStream format: https://player.smashy.stream/movie/TMDB_ID
-                        match = url.match(/smashy\.stream\/movie\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // VidSrc.to format: https://vidsrc.to/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/vidsrc\.to\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // VidSrc.xyz format: https://vidsrc.xyz/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/vidsrc\.xyz\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // EmbedSoap format: https://www.embedsoap.com/embed/movie/TMDB_ID
-                        match = url.match(/embedsoap\.com\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // MoviesAPI format: https://moviesapi.club/movie/TMDB_ID
-                        match = url.match(/moviesapi\.club\/movie\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // DBGO format: https://dbgo.fun/movie/TMDB_ID
-                        match = url.match(/dbgo\.fun\/movie\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // FlixHQ format: https://flixhq.to/watch/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/flixhq\.to\/watch\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // GoMovies format: https://gomovies.sx/watch/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/gomovies\.sx\/watch\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // ShowBox format: https://www.showbox.media/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/showbox\.media\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // PrimeWire format: https://primewire.mx/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/primewire\.mx\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // HDToday format: https://hdtoday.tv/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/hdtoday\.tv\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // VidCloud format: https://vidcloud.to/embed/movie/TMDB_ID or tv/TMDB_ID
-                        match = url.match(/vidcloud\.to\/embed\/(?:movie|tv)\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // StreamWish format: https://streamwish.to/e/TMDB_ID
-                        match = url.match(/streamwish\.to\/e\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // DoodStream format: https://doodstream.com/e/TMDB_ID
-                        match = url.match(/doodstream\.com\/e\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // StreamTape format: https://streamtape.com/e/TMDB_ID
-                        match = url.match(/streamtape\.com\/e\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // MixDrop format: https://mixdrop.co/e/TMDB_ID
-                        match = url.match(/mixdrop\.co\/e\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // FileMoon format: https://filemoon.sx/e/TMDB_ID
-                        match = url.match(/filemoon\.sx\/e\/(\d+)/);
-                        if (match) return match[1];
-                        
-                        // UpStream format: https://upstream.to/embed-TMDB_ID
-                        match = url.match(/upstream\.to\/embed-(\d+)/);
-                        if (match) return match[1];
-                    }
-                }
-            }
-            return null;
-        }
-
-        // Generate missing season
-        async function generateMissingSeason(tmdbId, seasonNumber, parentEntry) {
-            try {
-                const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${seasonNumber}`);
-                if (!seasonData) return null;
-
-                const episodes = [];
-                
-                for (const episodeData of seasonData.episodes || []) {
-                    const newEpisode = await generateMissingEpisode(tmdbId, seasonNumber, episodeData, parentEntry);
-                    if (newEpisode) {
-                        episodes.push(newEpisode);
-                    }
-                }
-
-                // Determine season title
-                let seasonTitle = seasonData.name || `Season ${seasonNumber}`;
-                if (seasonNumber === 0) {
-                    seasonTitle = seasonData.name || 'Specials';
-                }
-
-                return {
-                    Season: seasonNumber,
-                    SeasonPoster: parentEntry.Poster || null,
-                    Episodes: episodes
-                };
-            } catch (error) {
-                console.error(`Error generating season ${seasonNumber}:`, error);
-                return null;
-            }
-        }
-
-        // Generate missing episode
-        async function generateMissingEpisode(tmdbId, seasonNumber, episodeData, parentEntry) {
-            try {
-                // Auto-generate embed sources (excluding vidjoy, vidsrc, multiembed as requested)
-                const autoSources = generateEmbedSources(tmdbId, 'tv', seasonNumber, episodeData.episode_number);
-                
-                // Generate additional metadata-based sources
-                const metadataSources = generateMetadataBasedSources(tmdbId, seasonNumber, episodeData.episode_number, parentEntry.Title);
-
-                const allSources = [...autoSources, ...metadataSources];
-
-                // Determine episode type and title
-                let episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`;
-                let episodeType = '';
-                
-                if (seasonNumber === 0) {
-                    // Special episodes (Season 0)
-                    if (episodeData.name) {
-                        if (episodeData.name.toLowerCase().includes('ova')) {
-                            episodeType = ' (OVA)';
-                        } else if (episodeData.name.toLowerCase().includes('special')) {
-                            episodeType = ' (Special)';
-                        } else if (episodeData.name.toLowerCase().includes('movie')) {
-                            episodeType = ' (Movie)';
-                        } else {
-                            episodeType = ' (Special)';
-                        }
-                    } else {
-                        episodeType = ' (Special)';
-                    }
-                    episodeTitle += episodeType;
-                }
-
-                return {
-                    Episode: episodeData.episode_number,
-                    Title: episodeTitle,
-                    Duration: formatDuration(episodeData.runtime) || "00:45:00",
-                    Description: episodeData.overview || "Auto-generated episode",
-                    Thumbnail: episodeData.still_path ? `${TMDB_IMAGE_BASE}${episodeData.still_path}` : parentEntry.Poster,
-                    Servers: allSources.map(source => ({
-                        name: source.name || source.title,
-                        url: source.url
-                    }))
-                };
-            } catch (error) {
-                console.error(`Error generating episode S${seasonNumber}E${episodeData.episode_number}:`, error);
-                return null;
-            }
-        }
-
-        // Generate additional metadata-based sources
-        function generateMetadataBasedSources(tmdbId, seasonNumber, episodeNumber, seriesTitle) {
-            const sources = [];
-            const cleanTitle = seriesTitle.toLowerCase().replace(/[^a-z0-9]/g, '-');
-            
-            // Additional streaming sources (beyond the main auto-embed servers)
-            const additionalSources = [
-                {
-                    name: 'FileLions 1080p',
-                    url: `https://filelions.to/v/${cleanTitle}-s${seasonNumber}-e${episodeNumber}`
-                },
-                {
-                    name: 'StreamLare HD',
-                    url: `https://streamlare.com/e/${tmdbId}_s${seasonNumber}e${episodeNumber}`
-                },
-                {
-                    name: 'StreamHub',
-                    url: `https://streamhub.to/e/${tmdbId}-s${seasonNumber}-e${episodeNumber}`
-                },
-                {
-                    name: 'VidLink Pro',
-                    url: `https://vidlink.pro/movie/${tmdbId}?s=${seasonNumber}&e=${episodeNumber}`
-                },
-                {
-                    name: 'Cataz.net',
-                    url: `https://cataz.net/embed/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`
-                },
-                {
-                    name: 'NontonGuru',
-                    url: `https://tv.nontonguru.info/embed/tv/${tmdbId}/${seasonNumber}/${episodeNumber}`
-                },
-                {
-                    name: 'Warezcdn',
-                    url: `https://embed.warezcdn.com/v/${tmdbId}-s${seasonNumber}e${episodeNumber}`
-                },
-                {
-                    name: 'Fembed',
-                    url: `https://fembed.com/v/${cleanTitle}_${seasonNumber}_${episodeNumber}`
-                },
-                {
-                    name: 'Streamzz',
-                    url: `https://streamzz.to/v/${tmdbId}s${seasonNumber}e${episodeNumber}`
-                },
-                {
-                    name: 'Supervideo',
-                    url: `https://supervideo.tv/e/${tmdbId}_s${seasonNumber}_e${episodeNumber}`
-                }
-            ];
-
-            return additionalSources;
-        }
-
-        function createStatusElement() {
-            const element = document.createElement('div');
-            element.id = 'auto-embed-status';
-            element.className = 'status info';
-            element.style.display = 'none';
-            
-            // Find a suitable parent element to append to
-            const autoEmbedSection = document.querySelector('.auto-embed-config');
-            if (autoEmbedSection && autoEmbedSection.parentNode) {
-                autoEmbedSection.parentNode.appendChild(element);
-            }
-            
-            return element;
         }
 
         async function generateSeries(tmdbId) {
@@ -3608,7 +1977,7 @@
                         Description: episode.description || "",
                         Thumbnail: episode.image || series.image,
                         Servers: episode.sources?.map(source => ({
-                            name: source.name || source.title,
+                            name: source.title,
                             url: source.url
                         })) || []
                     }))
@@ -3692,6 +2061,7 @@
                 bio: "Actor information from TMDB"
             }));
         }
+
                  async function getSubtitles(tmdbId, type) {
              // This would integrate with a subtitle API
              // For now, return empty array
@@ -4062,130 +2432,37 @@
         async function generateByGenre() {
             const genreId = document.getElementById('genre-select').value;
             const count = parseInt(document.getElementById('genre-count').value);
-            const contentType = document.getElementById('content-type-select').value;
-            const year = document.getElementById('year-select').value;
             
-            console.log('🎬 Starting genre generation:', { genreId, count, contentType, year });
-            console.log('📊 Current data structure:', currentData);
+            const results = await fetchTMDB('/discover/movie', {
+                with_genres: genreId,
+                sort_by: 'popularity.desc',
+                page: 1
+            });
             
-            // Show loading and progress
-            showLoading('genre-loading', true);
-            document.getElementById('genre-progress').style.display = 'block';
-            document.getElementById('genre-progress-fill').style.width = '0%';
-            document.getElementById('genre-progress-text').textContent = 'Fetching content...';
-            
-            try {
-                let totalGenerated = 0;
-                const contentTypes = contentType === 'both' ? ['movie', 'tv'] : [contentType];
-                
-                for (let i = 0; i < contentTypes.length; i++) {
-                    const type = contentTypes[i];
-                    const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv';
-                    
-                    // Build query parameters
-                    const params = {
-                        with_genres: genreId,
-                        sort_by: 'popularity.desc',
-                        page: 1
-                    };
-                    
-                    // Add year filter if specified
-                    if (year) {
-                        if (type === 'movie') {
-                            params.primary_release_year = year;
-                        } else {
-                            params.first_air_date_year = year;
-                        }
-                    }
-                    
-                    console.log(`🔍 Fetching ${type} data from:`, endpoint, params);
-                    const results = await fetchTMDB(endpoint, params);
-                    console.log(`📥 Received ${type} results:`, results);
-                    
-                    if (!results?.results) {
-                        console.error(`❌ Failed to fetch ${type} data`);
-                        showStatus('error', `Failed to fetch ${type} data from TMDB`);
-                        continue;
-                    }
-                    
-                    const itemsToProcess = results.results.slice(0, contentType === 'both' ? Math.ceil(count / 2) : count);
-                    console.log(`🎯 Processing ${itemsToProcess.length} ${type} items:`, itemsToProcess.map(item => item.title || item.name));
-                    let generated = 0;
-                    
-                    for (let j = 0; j < itemsToProcess.length; j++) {
-                        const item = itemsToProcess[j];
-                        const progressPercent = ((i * count + j + 1) / (contentTypes.length * itemsToProcess.length)) * 100;
-                        
-                        // Update progress
-                        document.getElementById('genre-progress-fill').style.width = `${progressPercent}%`;
-                        document.getElementById('genre-progress-text').textContent = 
-                            `Processing ${type === 'movie' ? 'movies' : 'TV series'}: ${j + 1}/${itemsToProcess.length}`;
-                        
-                        try {
-                            // Check for duplicate by title instead of ID
-                            const itemTitle = item.title || item.name;
-                            if (!isDuplicateByTitle(itemTitle, type)) {
-                                if (type === 'movie') {
-                                    await generateMovie(item.id);
-                                } else {
-                                    await generateSeries(item.id);
-                                }
-                                generated++;
-                                totalGenerated++;
-                                console.log(`✅ Generated ${type}: ${itemTitle}`);
-                            } else {
-                                console.log(`⚠️ Skipped duplicate ${type}: ${itemTitle}`);
-                            }
-                        } catch (error) {
-                            console.error(`❌ Error generating ${type} ${item.id}:`, error);
-                        }
-                        
-                        // Small delay to prevent rate limiting
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                }
-                
-                // Complete progress
-                document.getElementById('genre-progress-fill').style.width = '100%';
-                document.getElementById('genre-progress-text').textContent = 'Complete!';
-                
-                console.log('🎉 Genre generation complete! Total generated:', totalGenerated);
-                console.log('📊 Final data structure:', currentData);
-                console.log('🎬 Movies count:', currentData.Categories.find(c => c.MainCategory === 'Movies')?.Entries.length || 0);
-                console.log('📺 TV Series count:', currentData.Categories.find(c => c.MainCategory === 'TV Series')?.Entries.length || 0);
-                
-                updateDataStats();
-                updatePreview();
-                
-                const typeText = contentType === 'both' ? 'movies and TV series' : 
-                                contentType === 'movie' ? 'movies' : 'TV series';
-                const yearText = year ? ` from ${year}` : '';
-                showStatus('success', `Generated ${totalGenerated} ${typeText} from selected genre${yearText}!`);
-                
-            } catch (error) {
-                console.error('Genre generation failed:', error);
-                showStatus('error', 'Genre generation failed: ' + error.message);
-            } finally {
-                // Hide loading and progress after a delay
-                setTimeout(() => {
-                    showLoading('genre-loading', false);
-                    document.getElementById('genre-progress').style.display = 'none';
-                }, 2000);
+            if (!results?.results) {
+                showStatus('error', 'Failed to fetch genre data');
+                return;
             }
-        }
-
-        function isDuplicate(tmdbId, type) {
-            const categoryName = type === 'movie' ? 'Movies' : 'TV Series';
-            const category = currentData.Categories.find(cat => cat.MainCategory === categoryName);
-            if (!category) return false;
             
-            // Check for duplicate by TMDB ID in the entry's metadata or description
-            // Since we don't store TMDB ID directly, we'll check if the title already exists
-            // after fetching the actual title from TMDB
-            return false; // For now, let the generation function handle duplicates after fetching title
+            let generated = 0;
+            
+            for (const movie of results.results.slice(0, count)) {
+                try {
+                    if (!isDuplicate(movie.id, 'movie')) {
+                        await generateMovie(movie.id);
+                        generated++;
+                    }
+                } catch (error) {
+                    console.error(`Error generating movie ${movie.id}:`, error);
+                }
+            }
+            
+            updateDataStats();
+            updatePreview();
+            showStatus('success', `Generated ${generated} movies from selected genre!`);
         }
 
-        function isDuplicateByTitle(title, type) {
+        function isDuplicate(title, type) {
             const categoryName = type === 'movie' ? 'Movies' : 'TV Series';
             const category = currentData.Categories.find(cat => cat.MainCategory === categoryName);
             if (!category) return false;
@@ -4193,28 +2470,6 @@
             return category.Entries.some(entry => 
                 entry.Title.toLowerCase() === title.toLowerCase()
             );
-        }
-
-        async function testGeneration() {
-            console.log('🧪 Starting test generation...');
-            console.log('📊 Current data before test:', currentData);
-            
-            try {
-                // Test generating a popular movie (The Dark Knight - TMDB ID: 155)
-                showStatus('info', 'Testing movie generation...');
-                await generateMovie(155);
-                
-                console.log('🎬 After movie generation:', currentData);
-                console.log('Movies count:', currentData.Categories.find(c => c.MainCategory === 'Movies')?.Entries.length || 0);
-                
-                updateDataStats();
-                updatePreview();
-                showStatus('success', 'Test generation completed! Check console for details.');
-                
-            } catch (error) {
-                console.error('❌ Test generation failed:', error);
-                showStatus('error', 'Test generation failed: ' + error.message);
-            }
         }
 
         // Data management functions
@@ -4486,12 +2741,14 @@
                 }
             }
         }
+        
         function cancelImport() {
             importCancelled = true;
             hideImportProgress();
             showLoading('import-loading', false);
             showStatus('warning', 'Import cancelled');
         }
+        
         function hideImportProgress() {
             document.getElementById('import-progress-section').style.display = 'none';
             document.getElementById('cancel-import-btn').style.display = 'none';
@@ -4744,107 +3001,16 @@
         }
 
                                  function exportData() {
-            try {
-                // Export the Categories structure directly
-                const dataStr = JSON.stringify(currentData, null, 2);
-                const dataSizeMB = (dataStr.length / 1024 / 1024).toFixed(2);
-                
-                console.log(`📤 Exporting ${dataSizeMB}MB of data`);
-                
-                // For large data, use chunked download approach
-                if (dataStr.length > 50 * 1024 * 1024) { // > 50MB
-                    showStatus('info', `Preparing large export (${dataSizeMB}MB)...`);
-                    exportLargeData(dataStr);
-                    return;
-                }
-                
-                // Standard export for smaller data
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                
-                // Check if blob was created successfully
-                if (!dataBlob || dataBlob.size === 0) {
-                    throw new Error('Failed to create export file blob');
-                }
-                
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(dataBlob);
-                
-                if (!url) {
-                    throw new Error('Failed to create download URL');
-                }
-                
-                link.href = url;
-                link.download = `playlist-${new Date().toISOString().split('T')[0]}.json`;
-                
-                // Add link to document temporarily to ensure it works
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Clean up the object URL after download
-                setTimeout(() => {
-                    URL.revokeObjectURL(url);
-                }, 1000);
-                
-                showStatus('success', `Data exported successfully! File size: ${dataSizeMB}MB`);
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                showStatus('error', `Export failed: ${error.message}`);
-                
-                // Fallback: try to copy to clipboard for large data
-                if (error.message.includes('large') || error.message.includes('blob')) {
-                    try {
-                        const dataStr = JSON.stringify(currentData, null, 2);
-                        navigator.clipboard.writeText(dataStr).then(() => {
-                            showStatus('warning', 'Export failed, but data copied to clipboard. Paste into a text file and save as .json');
-                        }).catch(() => {
-                            showStatus('error', 'Export failed and clipboard unavailable. Try using GitHub upload instead.');
-                        });
-                    } catch (clipboardError) {
-                        showStatus('error', 'Export failed. Try using GitHub upload for large datasets.');
-                    }
-                }
-            }
-        }
-        
-        // Handle large data exports with chunked approach
-        function exportLargeData(dataStr) {
-            try {
-                // Split data into smaller chunks for processing
-                const chunkSize = 10 * 1024 * 1024; // 10MB chunks
-                const chunks = [];
-                
-                for (let i = 0; i < dataStr.length; i += chunkSize) {
-                    chunks.push(dataStr.slice(i, i + chunkSize));
-                }
-                
-                showStatus('info', `Processing ${chunks.length} chunks...`);
-                
-                // Create blob from chunks
-                const dataBlob = new Blob(chunks, { type: 'application/json' });
-                
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(dataBlob);
-                
-                link.href = url;
-                link.download = `playlist-large-${new Date().toISOString().split('T')[0]}.json`;
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                setTimeout(() => {
-                    URL.revokeObjectURL(url);
-                }, 2000);
-                
-                const sizeMB = (dataStr.length / 1024 / 1024).toFixed(2);
-                showStatus('success', `Large dataset (${sizeMB}MB) exported successfully in ${chunks.length} chunks!`);
-                
-            } catch (error) {
-                console.error('Large export error:', error);
-                showStatus('error', `Large export failed: ${error.message}. Try GitHub upload instead.`);
-            }
+            // Export the Categories structure directly
+            const dataStr = JSON.stringify(currentData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `playlist-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showStatus('success', 'Data exported successfully in Categories structure!');
         }
 
                  function exportSample() {
@@ -5079,98 +3245,30 @@
         }
 
         async function optimizeStorage() {
-            // Show detailed warning before proceeding
-            const warningMessage = `⚠️ STORAGE OPTIMIZATION WARNING ⚠️
-
-This will remove entries that appear to have:
-• Empty or missing titles
-• No server links
-• Malformed data structures
-
-This operation may accidentally delete valid TV series or movies if their data structure is unexpected.
-
-RECOMMENDATION: Create a backup first (Export your data)
-
-Are you sure you want to continue?`;
-
-            if (!confirm(warningMessage)) {
-                return;
-            }
-            
             try {
-                showStatus('info', 'Analyzing entries for optimization...');
+                showStatus('info', 'Optimizing storage...');
                 
-                let totalOptimized = 0;
-                let analysisReport = [];
-                
+                // Remove empty entries and clean up data
+                let optimized = 0;
                 currentData.Categories.forEach(category => {
                     const originalLength = category.Entries.length;
-                    const toRemove = [];
-                    
-                    // Analyze what would be removed
-                    category.Entries.forEach((entry, index) => {
-                        const issues = [];
-                        
-                        if (!entry.Title || entry.Title.trim() === '') {
-                            issues.push('missing title');
-                        }
-                        if (!entry.Servers || entry.Servers.length === 0) {
-                            issues.push('no servers');
-                        }
-                        if (!entry.Image || entry.Image.trim() === '') {
-                            issues.push('missing image');
-                        }
-                        
-                        if (issues.length > 0) {
-                            toRemove.push({
-                                index,
-                                title: entry.Title || 'Untitled',
-                                issues: issues.join(', ')
-                            });
-                        }
+                    category.Entries = category.Entries.filter(entry => {
+                        // Remove entries without titles or servers
+                        return entry.Title && entry.Title.trim() !== '' && 
+                               entry.Servers && entry.Servers.length > 0;
                     });
-                    
-                    if (toRemove.length > 0) {
-                        analysisReport.push(`${category.MainCategory}: ${toRemove.length} entries to remove`);
-                        
-                        // Remove entries in reverse order to maintain indices
-                        toRemove.reverse().forEach(item => {
-                            category.Entries.splice(item.index, 1);
-                        });
-                        
-                        totalOptimized += toRemove.length;
-                    }
+                    optimized += originalLength - category.Entries.length;
                 });
-                
-                if (totalOptimized === 0) {
-                    showStatus('success', 'No optimization needed - all entries appear to be valid!');
-                    return;
-                }
-                
-                // Show what was found before final confirmation
-                const finalConfirm = `Found ${totalOptimized} entries to remove:
-${analysisReport.join('\n')}
-Proceed with removal?`;
-                
-                if (!confirm(finalConfirm)) {
-                    // Reload original data
-                    await loadData();
-                    showStatus('info', 'Optimization cancelled - no changes made');
-                    return;
-                }
                 
                 // Save optimized data
                 await saveData();
                 updateDataStats();
                 updatePreview();
                 
-                showStatus('success', `Storage optimized! Removed ${totalOptimized} problematic entries. Check the results and restore from backup if needed.`);
-                
+                showStatus('success', `Storage optimized! Removed ${optimized} empty entries.`);
             } catch (error) {
                 console.error('Optimization failed:', error);
                 showStatus('error', 'Optimization failed: ' + error.message);
-                // Try to reload original data
-                await loadData();
             }
         }
 
@@ -5529,7 +3627,7 @@ Proceed with removal?`;
             form.innerHTML = `
                 <div class="form-group">
                     <label>Server Name</label>
-                                            <input type="text" id="quick-server-name" placeholder="e.g., VidJoy 1080p">
+                    <input type="text" id="quick-server-name" placeholder="e.g., VidSrc Server 1080p">
                 </div>
                 <div class="form-group">
                     <label>Server URL</label>
@@ -5615,7 +3713,7 @@ Proceed with removal?`;
             form.innerHTML = `
                 <div class="form-group">
                     <label>Server Name</label>
-                                            <input type="text" id="quick-episode-server-name" placeholder="e.g., VidJoy 1080p">
+                    <input type="text" id="quick-episode-server-name" placeholder="e.g., VidSrc Server 1080p">
                 </div>
                 <div class="form-group">
                     <label>Server URL</label>
@@ -5927,6 +4025,7 @@ Proceed with removal?`;
                 throw new Error(errorMessage);
             }
         }
+
         async function loadSavedData() {
             try {
                 // Check if data is stored in IndexedDB
@@ -6035,94 +4134,6 @@ Proceed with removal?`;
                 multiembed: {
                     enabled: document.getElementById('auto-multiembed').checked,
                     quality: document.getElementById('multiembed-quality').value
-                },
-                embedsu: {
-                    enabled: document.getElementById('auto-embedsu').checked,
-                    quality: document.getElementById('embedsu-quality').value
-                },
-                vidsrcme: {
-                    enabled: document.getElementById('auto-vidsrcme').checked,
-                    quality: document.getElementById('vidsrcme-quality').value
-                },
-                autoembed: {
-                    enabled: document.getElementById('auto-autoembed').checked,
-                    quality: document.getElementById('autoembed-quality').value
-                },
-                smashystream: {
-                    enabled: document.getElementById('auto-smashystream').checked,
-                    quality: document.getElementById('smashystream-quality').value
-                },
-                vidsrcto: {
-                    enabled: document.getElementById('auto-vidsrcto').checked,
-                    quality: document.getElementById('vidsrcto-quality').value
-                },
-                vidsrcxyz: {
-                    enabled: document.getElementById('auto-vidsrcxyz').checked,
-                    quality: document.getElementById('vidsrcxyz-quality').value
-                },
-                embedsoap: {
-                    enabled: document.getElementById('auto-embedsoap').checked,
-                    quality: document.getElementById('embedsoap-quality').value
-                },
-                moviesapi: {
-                    enabled: document.getElementById('auto-moviesapi').checked,
-                    quality: document.getElementById('moviesapi-quality').value
-                },
-                dbgo: {
-                    enabled: document.getElementById('auto-dbgo').checked,
-                    quality: document.getElementById('dbgo-quality').value
-                },
-                flixhq: {
-                    enabled: document.getElementById('auto-flixhq').checked,
-                    quality: document.getElementById('flixhq-quality').value
-                },
-                gomovies: {
-                    enabled: document.getElementById('auto-gomovies').checked,
-                    quality: document.getElementById('gomovies-quality').value
-                },
-                showbox: {
-                    enabled: document.getElementById('auto-showbox').checked,
-                    quality: document.getElementById('showbox-quality').value
-                },
-                primewire: {
-                    enabled: document.getElementById('auto-primewire').checked,
-                    quality: document.getElementById('primewire-quality').value
-                },
-                hdtoday: {
-                    enabled: document.getElementById('auto-hdtoday').checked,
-                    quality: document.getElementById('hdtoday-quality').value
-                },
-                vidcloud: {
-                    enabled: document.getElementById('auto-vidcloud').checked,
-                    quality: document.getElementById('vidcloud-quality').value
-                },
-                streamwish: {
-                    enabled: document.getElementById('auto-streamwish').checked,
-                    quality: document.getElementById('streamwish-quality').value
-                },
-                doodstream: {
-                    enabled: document.getElementById('auto-doodstream').checked,
-                    quality: document.getElementById('doodstream-quality').value
-                },
-                streamtape: {
-                    enabled: document.getElementById('auto-streamtape').checked,
-                    quality: document.getElementById('streamtape-quality').value
-                },
-                mixdrop: {
-                    enabled: document.getElementById('auto-mixdrop').checked,
-                    quality: document.getElementById('mixdrop-quality').value
-                },
-                filemoon: {
-                    enabled: document.getElementById('auto-filemoon').checked,
-                    quality: document.getElementById('filemoon-quality').value
-                },
-                upstream: {
-                    enabled: document.getElementById('auto-upstream').checked,
-                    quality: document.getElementById('upstream-quality').value
-                },
-                vidlink: {
-                    enabled: document.getElementById('auto-vidlink').checked,
-                    quality: document.getElementById('vidlink-quality').value
                 }
             };
         }
@@ -6179,322 +4190,6 @@ Proceed with removal?`;
                 });
             }
 
-            if (config.embedsu.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${EMBEDSU_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${EMBEDSU_BASE}/${contentType}/${tmdbId}`;
-                }
-                
-                sources.push({
-                    name: `Embed.su ${config.embedsu.quality}`,
-                    subtitle1: "",
-                    subtitle2: "",
-                    url: url
-                });
-            }
-
-            if (config.vidsrcme.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${VIDSRCME_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${VIDSRCME_BASE}/${contentType}/${tmdbId}`;
-                }
-                
-                sources.push({
-                    name: `VidSrc.me ${config.vidsrcme.quality}`,
-                    subtitle1: "",
-                    subtitle2: "",
-                    url: url
-                });
-            }
-
-            if (config.autoembed.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${AUTOEMBED_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${AUTOEMBED_BASE}/${contentType}/${tmdbId}`;
-                }
-                
-                sources.push({
-                    name: `AutoEmbed ${config.autoembed.quality}`,
-                    subtitle1: "",
-                    subtitle2: "",
-                    url: url
-                });
-            }
-
-            if (config.smashystream.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${SMASHYSTREAM_BASE}/${tmdbId}?s=${seasonNum}&e=${episodeNum}`;
-                } else {
-                    url = `${SMASHYSTREAM_BASE}/${tmdbId}`;
-                }
-                
-                sources.push({
-                    name: `SmashyStream ${config.smashystream.quality}`,
-                    subtitle1: "",
-                    subtitle2: "",
-                    url: url
-                });
-            }
-
-            // VidSrc.to
-            if (config.vidsrcto.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${VIDSRCTO_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${VIDSRCTO_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `VidSrc.to ${config.vidsrcto.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // VidSrc.xyz
-            if (config.vidsrcxyz.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${VIDSRCXYZ_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${VIDSRCXYZ_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `VidSrc.xyz ${config.vidsrcxyz.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // EmbedSoap
-            if (config.embedsoap.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${EMBEDSOAP_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${EMBEDSOAP_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `EmbedSoap ${config.embedsoap.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // MoviesAPI
-            if (config.moviesapi.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${MOVIESAPI_BASE}/${tmdbId}?s=${seasonNum}&e=${episodeNum}`;
-                } else {
-                    url = `${MOVIESAPI_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `MoviesAPI ${config.moviesapi.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // DBGO
-            if (config.dbgo.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${DBGO_BASE}/${tmdbId}?s=${seasonNum}&e=${episodeNum}`;
-                } else {
-                    url = `${DBGO_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `DBGO ${config.dbgo.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // FlixHQ
-            if (config.flixhq.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${FLIXHQ_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${FLIXHQ_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `FlixHQ ${config.flixhq.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // GoMovies
-            if (config.gomovies.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${GOMOVIES_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${GOMOVIES_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `GoMovies ${config.gomovies.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // ShowBox
-            if (config.showbox.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${SHOWBOX_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${SHOWBOX_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `ShowBox ${config.showbox.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // PrimeWire
-            if (config.primewire.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${PRIMEWIRE_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${PRIMEWIRE_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `PrimeWire ${config.primewire.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // HDToday
-            if (config.hdtoday.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${HDTODAY_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${HDTODAY_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `HDToday ${config.hdtoday.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // VidCloud
-            if (config.vidcloud.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${VIDCLOUD_BASE}/tv/${tmdbId}/${seasonNum}/${episodeNum}`;
-                } else {
-                    url = `${VIDCLOUD_BASE}/movie/${tmdbId}`;
-                }
-                sources.push({
-                    name: `VidCloud ${config.vidcloud.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // StreamWish
-            if (config.streamwish.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${STREAMWISH_BASE}/${tmdbId}_s${seasonNum}e${episodeNum}`;
-                } else {
-                    url = `${STREAMWISH_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `StreamWish ${config.streamwish.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // DoodStream
-            if (config.doodstream.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${DOODSTREAM_BASE}/${tmdbId}_s${seasonNum}e${episodeNum}`;
-                } else {
-                    url = `${DOODSTREAM_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `DoodStream ${config.doodstream.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // StreamTape
-            if (config.streamtape.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${STREAMTAPE_BASE}/${tmdbId}_s${seasonNum}e${episodeNum}`;
-                } else {
-                    url = `${STREAMTAPE_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `StreamTape ${config.streamtape.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // MixDrop
-            if (config.mixdrop.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${MIXDROP_BASE}/${tmdbId}_s${seasonNum}e${episodeNum}`;
-                } else {
-                    url = `${MIXDROP_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `MixDrop ${config.mixdrop.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // FileMoon
-            if (config.filemoon.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${FILEMOON_BASE}/${tmdbId}_s${seasonNum}e${episodeNum}`;
-                } else {
-                    url = `${FILEMOON_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `FileMoon ${config.filemoon.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // UpStream
-            if (config.upstream.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${UPSTREAM_BASE}/embed-${tmdbId}s${seasonNum}e${episodeNum}.html`;
-                } else {
-                    url = `${UPSTREAM_BASE}/embed-${tmdbId}.html`;
-                }
-                sources.push({
-                    name: `UpStream ${config.upstream.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
-            // VidLink
-            if (config.vidlink.enabled) {
-                let url;
-                if (contentType === 'tv' && seasonNum && episodeNum) {
-                    url = `${VIDLINK_BASE}/${tmdbId}?s=${seasonNum}&e=${episodeNum}`;
-                } else {
-                    url = `${VIDLINK_BASE}/${tmdbId}`;
-                }
-                sources.push({
-                    name: `VidLink.pro ${config.vidlink.quality}`,
-                    subtitle1: "", subtitle2: "", url: url
-                });
-            }
-
             return sources;
         }
 
@@ -6504,53 +4199,12 @@ Proceed with removal?`;
                 server.url && (
                     server.url.includes('vidsrc.net/embed') ||
                     server.url.includes('vidjoy.pro/embed') ||
-                    server.url.includes('multiembed.mov') ||
-                    server.url.includes('embed.su/embed') ||
-                    server.url.includes('vidsrc.me/embed') ||
-                    server.url.includes('autoembed.cc/embed') ||
-                    server.url.includes('smashy.stream') ||
-                    server.url.includes('vidsrc.to/embed') ||
-                    server.url.includes('vidsrc.xyz/embed') ||
-                    server.url.includes('embedsoap.com') ||
-                    server.url.includes('moviesapi.club') ||
-                    server.url.includes('dbgo.fun') ||
-                    server.url.includes('flixhq.to') ||
-                    server.url.includes('gomovies.sx') ||
-                    server.url.includes('showbox.media') ||
-                    server.url.includes('primewire.mx') ||
-                    server.url.includes('hdtoday.tv') ||
-                    server.url.includes('vidcloud.to') ||
-                    server.url.includes('streamwish.to') ||
-                    server.url.includes('doodstream.com') ||
-                    server.url.includes('streamtape.com') ||
-                    server.url.includes('mixdrop.co') ||
-                    server.url.includes('filemoon.sx') ||
-                    server.url.includes('upstream.to') ||
-                    server.url.includes('vidlink.pro')
+                    server.url.includes('multiembed.mov')
                 ) ||
                 server.name && (
                     server.name.includes('VidSrc') ||
                     server.name.includes('VidJoy') ||
-                    server.name.includes('MultiEmbed') ||
-                    server.name.includes('Embed.su') ||
-                    server.name.includes('AutoEmbed') ||
-                    server.name.includes('SmashyStream') ||
-                    server.name.includes('EmbedSoap') ||
-                    server.name.includes('MoviesAPI') ||
-                    server.name.includes('DBGO') ||
-                    server.name.includes('FlixHQ') ||
-                    server.name.includes('GoMovies') ||
-                    server.name.includes('ShowBox') ||
-                    server.name.includes('PrimeWire') ||
-                    server.name.includes('HDToday') ||
-                    server.name.includes('VidCloud') ||
-                    server.name.includes('StreamWish') ||
-                    server.name.includes('DoodStream') ||
-                    server.name.includes('StreamTape') ||
-                    server.name.includes('MixDrop') ||
-                    server.name.includes('FileMoon') ||
-                    server.name.includes('UpStream') ||
-                    server.name.includes('VidLink')
+                    server.name.includes('MultiEmbed')
                 )
             );
         }
@@ -6683,6 +4337,7 @@ Proceed with removal?`;
                 statusEl.style.display = 'none';
             }
         }
+
         // Global variables for checkbox functionality
         window.selectedContent = new Map(); // Store selected content with TMDB search results
         window.contentGroups = { movies: [], series: [] };
@@ -7169,7 +4824,7 @@ Proceed with removal?`;
                         autoSources.forEach(source => {
                             movie.Servers = movie.Servers || [];
                             movie.Servers.push({
-                                name: source.name || source.title,
+                                name: source.title,
                                 url: source.url
                             });
                         });
@@ -7218,7 +4873,7 @@ Proceed with removal?`;
                         autoSources.forEach(source => {
                             episode.Servers = episode.Servers || [];
                             episode.Servers.push({
-                                name: source.name || source.title,
+                                name: source.title,
                                 url: source.url
                             });
                         });
@@ -7394,6 +5049,7 @@ Proceed with removal?`;
                 `;
             }
         }
+        
         async function applyAutoEmbedToSelected() {
             const select = document.getElementById('auto-embed-content-select');
             const tmdbIdInput = document.getElementById('selected-tmdb-id');
