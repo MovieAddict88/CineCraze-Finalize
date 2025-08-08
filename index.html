@@ -6924,6 +6924,47 @@ Proceed with removal?`;
                 series.Country = (seriesData.origin_country?.[0]) || series.Country;
                 series.TMDB_ID = String(tmdbId);
             }
+
+            // Ensure seasons array exists
+            if (!Array.isArray(series.Seasons)) series.Seasons = [];
+
+            // Use TMDB seasons list to detect and generate missing seasons/episodes
+            try {
+                const tmdbSeasons = (seriesData?.seasons || [])
+                    .map(s => s.season_number)
+                    .filter(n => Number.isInteger(n));
+
+                for (const seasonNum of tmdbSeasons) {
+                    // Find existing season
+                    let season = series.Seasons.find(s => s.Season === seasonNum);
+                    if (!season) {
+                        const created = await generateMissingSeason(tmdbId, seasonNum, series);
+                        if (created) {
+                            series.Seasons.push(created);
+                            season = created;
+                        }
+                    }
+
+                    // Populate any missing episodes in this season
+                    if (season) {
+                        const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${seasonNum}`);
+                        const tmdbEpisodes = (seasonData?.episodes || []).map(e => e.episode_number);
+                        if (!Array.isArray(season.Episodes)) season.Episodes = [];
+                        const existingNums = new Set(season.Episodes.map(e => e.Episode));
+                        for (const epNum of tmdbEpisodes) {
+                            if (!existingNums.has(epNum)) {
+                                const epData = (seasonData?.episodes || []).find(e => e.episode_number === epNum);
+                                const newEp = await generateMissingEpisode(tmdbId, seasonNum, epData, series);
+                                if (newEp) season.Episodes.push(newEp);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Series missing-content generation skipped:', e);
+            }
+
+            // Add embed sources to all episodes (existing or newly created)
             for (let s = 0; s < (series.Seasons?.length || 0); s++) {
                 const season = series.Seasons[s];
                 if (!season?.Episodes) continue;
