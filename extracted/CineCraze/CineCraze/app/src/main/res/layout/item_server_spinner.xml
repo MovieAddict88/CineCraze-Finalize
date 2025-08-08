@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    
+    <RelativeLayout
+        android:layout_marginLeft="12dp"
+        android:layout_marginRight="12dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginTop="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        
+        <!-- Server Type Icon -->
+        <ImageView
+            android:id="@+id/image_view_server_type_icon"
+            android:tint="@android:color/black"
+            android:background="#c8ffffff"
+            android:padding="10dp"
+            android:src="@drawable/ic_media_play"
+            android:layout_width="50dp"
+            android:layout_height="50dp" />
+            
+        <!-- Premium Indicator -->
+        <ImageView
+            android:visibility="gone"
+            android:id="@+id/image_view_server_premium"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="40dp"
+            android:padding="3dp"
+            android:elevation="5dp"
+            android:tint="@android:color/black"
+            android:background="@drawable/bg_background_yellow"
+            android:src="@drawable/ic_plus"
+            android:layout_width="25dp"
+            android:layout_height="25dp"/>
+            
+        <!-- Server Info Section -->
+        <LinearLayout
+            android:paddingLeft="16dp"
+            android:gravity="center|left"
+            android:orientation="vertical"
+            android:layout_marginRight="55dp"
+            android:layout_marginLeft="55dp"
+            android:background="#c8ffffff"
+            android:layout_width="match_parent"
+            android:layout_height="50dp">
+            
+                         <TextView
+                 android:id="@+id/text_view_server_name"
+                 android:textStyle="bold"
+                 android:textColor="@android:color/black"
+                 android:text="Server Name"
+                 android:textSize="15sp"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content" />
+                 
+             <!-- Legacy ID for compatibility -->
+             <TextView
+                 android:id="@+id/server_name"
+                 android:layout_width="0dp"
+                 android:layout_height="0dp"
+                 android:visibility="gone" />
+
+             <TextView
+                 android:id="@+id/text_view_server_info"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:ellipsize="end"
+                 android:lines="1"
+                 android:textColor="@android:color/black"
+                 android:textSize="10sp"
+                 android:text="Auto Quality" />
+        </LinearLayout>
+        
+        <!-- Quality Badge -->
+        <TextView
+            android:id="@+id/text_view_server_quality"
+            android:paddingRight="5dp"
+            android:paddingLeft="5dp"
+            android:layout_centerVertical="true"
+            android:layout_marginTop="6dp"
+            android:layout_marginRight="60dp"
+            android:layout_alignParentRight="true"
+            android:background="@drawable/bg_background_green"
+            android:text="HD"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            android:textSize="8sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+            
+        <!-- Play/Launch Button Section -->
+        <RelativeLayout
+            android:layout_alignParentRight="true"
+            android:background="#c8ffffff"
+            android:layout_width="50dp"
+            android:layout_height="50dp">
+            
+            <ImageView
+                android:id="@+id/image_view_server_play"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="11dp"
+                android:tint="@android:color/black"
+                android:layout_alignParentRight="true"
+                                 android:src="@drawable/ic_play_arrow"
+                 android:layout_width="50dp"
+                 android:layout_height="50dp" />
+                 
+         </RelativeLayout>
+         
+         <!-- Legacy selected indicator for compatibility -->
+         <View
+             android:id="@+id/selected_indicator"
+             android:layout_width="0dp"
+             android:layout_height="0dp"
+             android:visibility="gone" />
+             
+     </RelativeLayout>
+</RelativeLayout>
