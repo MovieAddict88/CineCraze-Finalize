@@ -1146,7 +1146,7 @@ public class EmbedActivity extends AppCompatActivity {
             String jsCode = "javascript:" +
                 "try {" +
                 "  console.log('Applying generic embed fix...');" +
-                "  var selectors = ['[class*=\\"ad\\"]','[id*=\\"ad\\"]','[class*=\\"ads\\"]','[id*=\\"ads\\"]','[class*=\\"overlay\\"]','[class*=\\"popup\\"]','[class*=\\"modal\\"]'];" +
+                "  var selectors = [\"[class*=ad]\",\"[id*=ad]\",\"[class*=ads]\",\"[id*=ads]\",\"[class*=overlay]\",\"[class*=popup]\",\"[class*=modal]\"];" +
                 "  selectors.forEach(function(s){document.querySelectorAll(s).forEach(function(e){e.style.display='none';e.style.visibility='hidden';e.style.opacity='0';e.style.pointerEvents='none';});});" +
                 "  var videos = document.querySelectorAll('video');" +
                 "  videos.forEach(function(v){v.style.display='block';v.style.visibility='visible';v.style.opacity='1';v.style.width='100%';v.style.height='100%';v.controls=true;v.autoplay=true;v.muted=false;v.playsInline=true;});" +
