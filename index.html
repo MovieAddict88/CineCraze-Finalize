@@ -6665,7 +6665,377 @@ Proceed with removal?`;
         }
 
 
-        // ... (rest of the code remains unchanged)
+        // ===== Checkbox List & Bulk Update (injected) =====
+        function extractTmdbIdFromUrl(url) {
+            if (!url) return null;
+            const patterns = [
+                /vidsrc\.(?:net|to|xyz)\/embed\/(?:movie|tv)\/(\d+)/,
+                /vidsrc\.me\/embed\/(?:movie|tv)\/(\d+)/,
+                /vidjoy\.pro\/embed\/(?:movie|tv)\/(\d+)/,
+                /multiembed\.mov\/directstream\.php.*(?:video_id|tmdb)=(\d+)/,
+                /embed\.su\/embed\/(?:movie|tv)\/(\d+)/,
+                /autoembed\.cc\/embed\/(?:movie|tv)\/(\d+)/,
+                /smashy\.stream\/(?:movie|tv)\/(\d+)/,
+                /embedsoap\.com\/embed\/(?:movie|tv)\/(\d+)/,
+                /moviesapi\.club\/movie\/(\d+)/,
+                /dbgo\.fun\/movie\/(\d+)/,
+                /flixhq\.to\/watch\/(?:movie|tv)\/(\d+)/,
+                /gomovies\.sx\/watch\/(?:movie|tv)\/(\d+)/,
+                /showbox\.media\/embed\/(?:movie|tv)\/(\d+)/,
+                /primewire\.mx\/embed\/(?:movie|tv)\/(\d+)/,
+                /hdtoday\.tv\/embed\/(?:movie|tv)\/(\d+)/,
+                /vidcloud\.to\/embed\/(?:movie|tv)\/(\d+)/,
+                /streamwish\.to\/e\/(\d+)/,
+                /doodstream\.com\/e\/(\d+)/,
+                /streamtape\.com\/e\/(\d+)/,
+                /mixdrop\.co\/e\/(\d+)/,
+                /filemoon\.sx\/e\/(\d+)/,
+                /upstream\.to\/embed-(\d+)/,
+                /vidlink\.pro\/(?:movie|tv)\/(\d+)/
+            ];
+            for (const re of patterns) {
+                const match = url.match(re);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        function findTmdbIdForMovieEntry(entry) {
+            if (!entry) return null;
+            if (entry.TMDB_ID || entry.tmdb_id) return entry.TMDB_ID || entry.tmdb_id;
+            if (Array.isArray(entry.Servers)) {
+                for (const s of entry.Servers) {
+                    const id = extractTmdbIdFromUrl(s.url);
+                    if (id) return id;
+                }
+            }
+            const title = entry.Title || '';
+            let m = title.match(/\[?tmdb:?\s*(\d{4,8})\]?/i) || title.match(/\((\d{4,8})\)/);
+            if (m) return m[1];
+            return null;
+        }
+
+        function findTmdbIdForSeriesEntry(series) {
+            if (!series) return null;
+            if (series.TMDB_ID || series.tmdb_id) return series.TMDB_ID || series.tmdb_id;
+            const idFromEpisodes = extractTMDBIdFromEntry(series);
+            if (idFromEpisodes) return idFromEpisodes;
+            const title = series.Title || '';
+            const m = title.match(/\[?tmdb:?\s*(\d{4,8})\]?/i) || title.match(/\((\d{4,8})\)/);
+            return m ? m[1] : null;
+        }
+
+        function entryHasAnyEmbed(entry) {
+            if (entry.Seasons) {
+                for (const season of entry.Seasons || []) {
+                    for (const ep of season.Episodes || []) {
+                        if (hasEmbedSources(ep)) return true;
+                    }
+                }
+                return false;
+            }
+            return hasEmbedSources(entry);
+        }
+
+        function refreshContentCheckboxes() {
+            const list = document.getElementById('content-checkbox-list');
+            const counter = document.getElementById('selection-counter');
+            if (!list || !currentData || !currentData.Categories) return;
+            list.innerHTML = '';
+
+            const moviesCategory = currentData.Categories.find(c => c.MainCategory === 'Movies');
+            const seriesCategory = currentData.Categories.find(c => c.MainCategory === 'TV Series');
+            const items = [];
+
+            (moviesCategory?.Entries || []).forEach((entry, idx) => {
+                const hasEmbed = entryHasAnyEmbed(entry);
+                if (!hasEmbed) {
+                    const tmdbId = findTmdbIdForMovieEntry(entry);
+                    items.push({ type: 'movie', index: idx, title: entry.Title || 'Untitled Movie', tmdbId, needsTmdb: !tmdbId });
+                }
+            });
+
+            (seriesCategory?.Entries || []).forEach((series, sIdx) => {
+                let missingEmbed = false;
+                for (const season of series.Seasons || []) {
+                    for (const ep of season.Episodes || []) {
+                        if (!hasEmbedSources(ep)) { missingEmbed = true; break; }
+                    }
+                    if (missingEmbed) break;
+                }
+                if (missingEmbed) {
+                    const tmdbId = findTmdbIdForSeriesEntry(series);
+                    items.push({ type: 'series', index: sIdx, title: series.Title || 'Untitled Series', tmdbId, needsTmdb: !tmdbId });
+                }
+            });
+
+            const MAX_RENDER = 200;
+            const renderItems = items.slice(0, MAX_RENDER);
+            renderItems.forEach((it) => {
+                const row = document.createElement('div');
+                row.className = 'content-checkbox-item';
+                row.innerHTML = `
+                    <input type="checkbox" data-type="${it.type}" data-index="${it.index}" data-tmdbid="${it.tmdbId || ''}" aria-label="Select ${it.title}">
+                    <div class="content-checkbox-label">
+                        ${it.title} <span style=\"color: var(--text-secondary)\">• ${it.type === 'movie' ? 'Movie' : 'TV Series'}</span>
+                    </div>
+                    <div class=\"tmdb-status ${it.needsTmdb ? 'not-found' : 'found'}\">${it.needsTmdb ? 'TMDB ID: missing' : `TMDB ID: ${it.tmdbId}`}</div>
+                    <div class=\"tmdb-inline\" style=\"display:none; margin-left:auto; gap:6px; align-items:center;\">
+                        <input type=\"number\" class=\"tmdb-input\" placeholder=\"TMDB ID\" style=\"width:110px;padding:6px 8px;\" />
+                        <button class=\"btn btn-secondary btn-small tmdb-verify\">Verify</button>
+                    </div>`;
+                const cb = row.querySelector('input[type="checkbox"]');
+                const inline = row.querySelector('.tmdb-inline');
+                const verifyBtn = row.querySelector('.tmdb-verify');
+                const statusEl = row.querySelector('.tmdb-status');
+
+                cb.addEventListener('change', async (e) => {
+                    updateSelectionCounter();
+                    if (!e.target.checked) {
+                        inline.style.display = 'none';
+                        return;
+                    }
+                    // Start verify flow
+                    const tmdbFromAttr = cb.getAttribute('data-tmdbid');
+                    if (tmdbFromAttr) {
+                        statusEl.classList.remove('not-found');
+                        statusEl.classList.add('found');
+                        statusEl.textContent = `TMDB ID: ${tmdbFromAttr}`;
+                        return;
+                    }
+                    statusEl.classList.remove('found');
+                    statusEl.classList.add('searching');
+                    statusEl.textContent = 'Verifying TMDB...';
+
+                    const type = cb.getAttribute('data-type');
+                    const idx = parseInt(cb.getAttribute('data-index'));
+                    const moviesCategory = currentData.Categories.find(c => c.MainCategory === 'Movies');
+                    const seriesCategory = currentData.Categories.find(c => c.MainCategory === 'TV Series');
+                    let guessed = '';
+                    try {
+                        if (type === 'movie' && moviesCategory?.Entries[idx]) {
+                            guessed = findTmdbIdForMovieEntry(moviesCategory.Entries[idx]) || '';
+                        } else if (type === 'series' && seriesCategory?.Entries[idx]) {
+                            guessed = findTmdbIdForSeriesEntry(seriesCategory.Entries[idx]) || '';
+                        }
+                    } catch {}
+
+                    if (guessed) {
+                        cb.setAttribute('data-tmdbid', guessed);
+                        statusEl.classList.remove('searching','not-found');
+                        statusEl.classList.add('found');
+                        statusEl.textContent = `TMDB ID: ${guessed}`;
+                        inline.style.display = 'none';
+                    } else {
+                        statusEl.classList.remove('searching');
+                        statusEl.classList.add('not-found');
+                        statusEl.textContent = 'TMDB ID: missing';
+                        inline.style.display = 'flex';
+                    }
+                });
+
+                verifyBtn.addEventListener('click', async () => {
+                    const input = row.querySelector('.tmdb-input');
+                    const id = (input.value || '').trim();
+                    if (!id) return;
+                    statusEl.classList.remove('not-found');
+                    statusEl.classList.add('searching');
+                    statusEl.textContent = 'Verifying...';
+
+                    try {
+                        const type = cb.getAttribute('data-type');
+                        const endpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+                        const data = await fetchTMDB(endpoint);
+                        if (data && (data.id || data.name || data.title)) {
+                            cb.setAttribute('data-tmdbid', id);
+                            statusEl.classList.remove('searching');
+                            statusEl.classList.add('found');
+                            statusEl.textContent = `TMDB ID: ${id}`;
+                            inline.style.display = 'none';
+                        } else {
+                            statusEl.classList.remove('searching');
+                            statusEl.classList.add('not-found');
+                            statusEl.textContent = 'Invalid TMDB ID';
+                        }
+                    } catch (err) {
+                        statusEl.classList.remove('searching');
+                        statusEl.classList.add('not-found');
+                        statusEl.textContent = 'Verify failed';
+                    }
+                });
+
+                list.appendChild(row);
+            });
+
+            counter.textContent = 'Selected: 0/10';
+            const bulkBtn = document.getElementById('bulk-update-btn');
+            if (bulkBtn) bulkBtn.disabled = true;
+        }
+
+        function clearAllSelections() {
+            const list = document.getElementById('content-checkbox-list');
+            list?.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            const bulkBtn = document.getElementById('bulk-update-btn');
+            if (bulkBtn) bulkBtn.disabled = true;
+            const counter = document.getElementById('selection-counter');
+            if (counter) counter.textContent = 'Selected: 0/10';
+        }
+
+        function updateSelectionCounter() {
+            const list = document.getElementById('content-checkbox-list');
+            const selected = Array.from(list?.querySelectorAll('input[type="checkbox"]') || []).filter(cb => cb.checked);
+            if (selected.length > 10) {
+                const last = selected.pop();
+                if (last) last.checked = false;
+            }
+            const finalSelected = Array.from(list?.querySelectorAll('input[type="checkbox"]') || []).filter(cb => cb.checked);
+            const counter = document.getElementById('selection-counter');
+            if (counter) counter.textContent = `Selected: ${finalSelected.length}/10`;
+            const bulkBtn = document.getElementById('bulk-update-btn');
+            if (bulkBtn) bulkBtn.disabled = finalSelected.length === 0;
+        }
+
+        async function processMovieForBulk(entry, tmdbId) {
+            const movieData = await fetchTMDB(`/movie/${tmdbId}`);
+            if (movieData) {
+                entry.Title = movieData.title || entry.Title;
+                entry.Description = movieData.overview || entry.Description;
+                entry.Poster = movieData.poster_path ? `${TMDB_IMAGE_BASE}${movieData.poster_path}` : entry.Poster;
+                entry.Thumbnail = movieData.backdrop_path ? `${TMDB_IMAGE_BASE}${movieData.backdrop_path}` : entry.Thumbnail;
+                entry.Rating = Math.round(movieData.vote_average || entry.Rating || 0);
+                entry.Year = parseInt(movieData.release_date?.substring(0, 4) || entry.Year || CURRENT_YEAR);
+                entry.Country = (movieData.production_countries?.[0]?.iso_3166_1) || entry.Country;
+                entry.TMDB_ID = String(tmdbId);
+            }
+            const embeds = generateEmbedSources(tmdbId, 'movie');
+            if (!entry.Servers) entry.Servers = [];
+            entry.Servers.push(...embeds);
+        }
+
+        async function processSeriesForBulk(series, tmdbId) {
+            const seriesData = await fetchTMDB(`/tv/${tmdbId}`);
+            if (seriesData) {
+                series.Title = seriesData.name || series.Title;
+                series.Description = seriesData.overview || series.Description;
+                series.Poster = seriesData.poster_path ? `${TMDB_IMAGE_BASE}${seriesData.poster_path}` : series.Poster;
+                series.Thumbnail = seriesData.backdrop_path ? `${TMDB_IMAGE_BASE}${seriesData.backdrop_path}` : series.Thumbnail;
+                series.Rating = Math.round(seriesData.vote_average || series.Rating || 0);
+                series.Year = parseInt(seriesData.first_air_date?.substring(0, 4) || series.Year || CURRENT_YEAR);
+                series.Country = (seriesData.origin_country?.[0]) || series.Country;
+                series.TMDB_ID = String(tmdbId);
+            }
+
+            // Ensure seasons array exists
+            if (!Array.isArray(series.Seasons)) series.Seasons = [];
+
+            // Use TMDB seasons list to detect and generate missing seasons/episodes
+            try {
+                const tmdbSeasons = (seriesData?.seasons || [])
+                    .map(s => s.season_number)
+                    .filter(n => Number.isInteger(n));
+
+                for (const seasonNum of tmdbSeasons) {
+                    // Find existing season
+                    let season = series.Seasons.find(s => s.Season === seasonNum);
+                    if (!season) {
+                        const created = await generateMissingSeason(tmdbId, seasonNum, series);
+                        if (created) {
+                            series.Seasons.push(created);
+                            season = created;
+                        }
+                    }
+
+                    // Populate any missing episodes in this season
+                    if (season) {
+                        const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${seasonNum}`);
+                        const tmdbEpisodes = (seasonData?.episodes || []).map(e => e.episode_number);
+                        if (!Array.isArray(season.Episodes)) season.Episodes = [];
+                        const existingNums = new Set(season.Episodes.map(e => e.Episode));
+                        for (const epNum of tmdbEpisodes) {
+                            if (!existingNums.has(epNum)) {
+                                const epData = (seasonData?.episodes || []).find(e => e.episode_number === epNum);
+                                const newEp = await generateMissingEpisode(tmdbId, seasonNum, epData, series);
+                                if (newEp) season.Episodes.push(newEp);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Series missing-content generation skipped:', e);
+            }
+
+            // Add embed sources to all episodes (existing or newly created)
+            for (let s = 0; s < (series.Seasons?.length || 0); s++) {
+                const season = series.Seasons[s];
+                if (!season?.Episodes) continue;
+                for (let e = 0; e < season.Episodes.length; e++) {
+                    const ep = season.Episodes[e];
+                    const embeds = generateEmbedSources(tmdbId, 'tv', season.Season, ep.Episode);
+                    if (!ep.Servers) ep.Servers = [];
+                    ep.Servers.push(...embeds);
+                }
+            }
+        }
+
+        async function bulkUpdateSelectedContent() {
+            const list = document.getElementById('content-checkbox-list');
+            const bulkBtn = document.getElementById('bulk-update-btn');
+            const progressBar = document.getElementById('bulk-update-progress');
+            const progressFill = document.getElementById('bulk-update-progress-fill');
+            const status = document.getElementById('bulk-update-status');
+
+            const selected = Array.from(list?.querySelectorAll('input[type="checkbox"]') || []).filter(cb => cb.checked);
+            if (selected.length === 0) return;
+
+            // Ensure all selected have TMDB IDs, otherwise show inline inputs
+            for (const cb of selected) {
+                const tmdb = cb.getAttribute('data-tmdbid');
+                if (!tmdb) {
+                    showStatus('warning', 'Some selected items are missing TMDB IDs. Please verify them first.');
+                    return;
+                }
+            }
+
+            bulkBtn.disabled = true;
+            if (progressBar) progressBar.style.display = 'block';
+            if (status) { status.style.display = 'block'; status.className = 'status info'; status.textContent = 'Starting bulk update...'; }
+
+            const moviesCategory = currentData.Categories.find(c => c.MainCategory === 'Movies');
+            const seriesCategory = currentData.Categories.find(c => c.MainCategory === 'TV Series');
+
+            for (let i = 0; i < selected.length; i++) {
+                const cb = selected[i];
+                const type = cb.getAttribute('data-type');
+                const index = parseInt(cb.getAttribute('data-index'));
+
+                try {
+                    if (type === 'movie' && moviesCategory?.Entries[index]) {
+                        const entry = moviesCategory.Entries[index];
+                        const tmdbId = cb.getAttribute('data-tmdbid');
+                        await processMovieForBulk(entry, tmdbId);
+                    } else if (type === 'series' && seriesCategory?.Entries[index]) {
+                        const series = seriesCategory.Entries[index];
+                        const tmdbId = cb.getAttribute('data-tmdbid');
+                        await processSeriesForBulk(series, tmdbId);
+                    }
+                } catch (e) {
+                    console.warn('Bulk update item failed:', e);
+                }
+
+                const pct = Math.round(((i + 1) / selected.length) * 100);
+                if (progressFill) progressFill.style.width = pct + '%';
+                if (status) status.textContent = `Processed ${i + 1} of ${selected.length} items...`;
+            }
+
+            await saveData();
+            updateDataStats();
+            updatePreview();
+            refreshContentCheckboxes();
+
+            if (status) { status.className = 'status success'; status.textContent = 'Bulk update complete!'; }
+            if (progressBar) setTimeout(() => { progressBar.style.display = 'none'; }, 800);
+        }
+
         function updateSelectedContentInfo() {
             const select = document.getElementById('auto-embed-content-select');
             const infoDiv = document.getElementById('selected-content-info');
