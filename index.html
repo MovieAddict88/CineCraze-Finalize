@@ -6775,15 +6775,95 @@ Proceed with removal?`;
                 const row = document.createElement('div');
                 row.className = 'content-checkbox-item';
                 row.innerHTML = `
-                    <input type="checkbox" data-type="${it.type}" data-index="${it.index}" aria-label="Select ${it.title}">
+                    <input type="checkbox" data-type="${it.type}" data-index="${it.index}" data-tmdbid="${it.tmdbId || ''}" aria-label="Select ${it.title}">
                     <div class="content-checkbox-label">
-                        ${it.title} <span style="color: var(--text-secondary)">• ${it.type === 'movie' ? 'Movie' : 'TV Series'}</span>
+                        ${it.title} <span style=\"color: var(--text-secondary)\">• ${it.type === 'movie' ? 'Movie' : 'TV Series'}</span>
                     </div>
-                    <div class="tmdb-status ${it.needsTmdb ? 'not-found' : 'found'}">
-                        ${it.needsTmdb ? 'TMDB ID: missing' : `TMDB ID: ${it.tmdbId}`}
+                    <div class=\"tmdb-status ${it.needsTmdb ? 'not-found' : 'found'}\">${it.needsTmdb ? 'TMDB ID: missing' : `TMDB ID: ${it.tmdbId}`}</div>
+                    <div class=\"tmdb-inline\" style=\"display:none; margin-left:auto; gap:6px; align-items:center;\">
+                        <input type=\"number\" class=\"tmdb-input\" placeholder=\"TMDB ID\" style=\"width:110px;padding:6px 8px;\" />
+                        <button class=\"btn btn-secondary btn-small tmdb-verify\">Verify</button>
                     </div>`;
                 const cb = row.querySelector('input[type="checkbox"]');
-                cb.addEventListener('change', updateSelectionCounter);
+                const inline = row.querySelector('.tmdb-inline');
+                const verifyBtn = row.querySelector('.tmdb-verify');
+                const statusEl = row.querySelector('.tmdb-status');
+
+                cb.addEventListener('change', async (e) => {
+                    updateSelectionCounter();
+                    if (!e.target.checked) {
+                        inline.style.display = 'none';
+                        return;
+                    }
+                    // Start verify flow
+                    const tmdbFromAttr = cb.getAttribute('data-tmdbid');
+                    if (tmdbFromAttr) {
+                        statusEl.classList.remove('not-found');
+                        statusEl.classList.add('found');
+                        statusEl.textContent = `TMDB ID: ${tmdbFromAttr}`;
+                        return;
+                    }
+                    statusEl.classList.remove('found');
+                    statusEl.classList.add('searching');
+                    statusEl.textContent = 'Verifying TMDB...';
+
+                    const type = cb.getAttribute('data-type');
+                    const idx = parseInt(cb.getAttribute('data-index'));
+                    const moviesCategory = currentData.Categories.find(c => c.MainCategory === 'Movies');
+                    const seriesCategory = currentData.Categories.find(c => c.MainCategory === 'TV Series');
+                    let guessed = '';
+                    try {
+                        if (type === 'movie' && moviesCategory?.Entries[idx]) {
+                            guessed = findTmdbIdForMovieEntry(moviesCategory.Entries[idx]) || '';
+                        } else if (type === 'series' && seriesCategory?.Entries[idx]) {
+                            guessed = findTmdbIdForSeriesEntry(seriesCategory.Entries[idx]) || '';
+                        }
+                    } catch {}
+
+                    if (guessed) {
+                        cb.setAttribute('data-tmdbid', guessed);
+                        statusEl.classList.remove('searching','not-found');
+                        statusEl.classList.add('found');
+                        statusEl.textContent = `TMDB ID: ${guessed}`;
+                        inline.style.display = 'none';
+                    } else {
+                        statusEl.classList.remove('searching');
+                        statusEl.classList.add('not-found');
+                        statusEl.textContent = 'TMDB ID: missing';
+                        inline.style.display = 'flex';
+                    }
+                });
+
+                verifyBtn.addEventListener('click', async () => {
+                    const input = row.querySelector('.tmdb-input');
+                    const id = (input.value || '').trim();
+                    if (!id) return;
+                    statusEl.classList.remove('not-found');
+                    statusEl.classList.add('searching');
+                    statusEl.textContent = 'Verifying...';
+
+                    try {
+                        const type = cb.getAttribute('data-type');
+                        const endpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+                        const data = await fetchTMDB(endpoint);
+                        if (data && (data.id || data.name || data.title)) {
+                            cb.setAttribute('data-tmdbid', id);
+                            statusEl.classList.remove('searching');
+                            statusEl.classList.add('found');
+                            statusEl.textContent = `TMDB ID: ${id}`;
+                            inline.style.display = 'none';
+                        } else {
+                            statusEl.classList.remove('searching');
+                            statusEl.classList.add('not-found');
+                            statusEl.textContent = 'Invalid TMDB ID';
+                        }
+                    } catch (err) {
+                        statusEl.classList.remove('searching');
+                        statusEl.classList.add('not-found');
+                        statusEl.textContent = 'Verify failed';
+                    }
+                });
+
                 list.appendChild(row);
             });
 
@@ -6866,6 +6946,15 @@ Proceed with removal?`;
             const selected = Array.from(list?.querySelectorAll('input[type="checkbox"]') || []).filter(cb => cb.checked);
             if (selected.length === 0) return;
 
+            // Ensure all selected have TMDB IDs, otherwise show inline inputs
+            for (const cb of selected) {
+                const tmdb = cb.getAttribute('data-tmdbid');
+                if (!tmdb) {
+                    showStatus('warning', 'Some selected items are missing TMDB IDs. Please verify them first.');
+                    return;
+                }
+            }
+
             bulkBtn.disabled = true;
             if (progressBar) progressBar.style.display = 'block';
             if (status) { status.style.display = 'block'; status.className = 'status info'; status.textContent = 'Starting bulk update...'; }
@@ -6881,22 +6970,12 @@ Proceed with removal?`;
                 try {
                     if (type === 'movie' && moviesCategory?.Entries[index]) {
                         const entry = moviesCategory.Entries[index];
-                        let tmdbId = findTmdbIdForMovieEntry(entry);
-                        if (!tmdbId) {
-                            tmdbId = prompt(`Enter TMDB ID for movie: ${entry.Title}`) || '';
-                        }
-                        if (tmdbId) {
-                            await processMovieForBulk(entry, tmdbId);
-                        }
+                        const tmdbId = cb.getAttribute('data-tmdbid');
+                        await processMovieForBulk(entry, tmdbId);
                     } else if (type === 'series' && seriesCategory?.Entries[index]) {
                         const series = seriesCategory.Entries[index];
-                        let tmdbId = findTmdbIdForSeriesEntry(series);
-                        if (!tmdbId) {
-                            tmdbId = prompt(`Enter TMDB ID for series: ${series.Title}`) || '';
-                        }
-                        if (tmdbId) {
-                            await processSeriesForBulk(series, tmdbId);
-                        }
+                        const tmdbId = cb.getAttribute('data-tmdbid');
+                        await processSeriesForBulk(series, tmdbId);
                     }
                 } catch (e) {
                     console.warn('Bulk update item failed:', e);
