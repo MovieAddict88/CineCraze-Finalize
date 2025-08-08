@@ -28,10 +28,22 @@ public class RetrofitClient {
                 public Response intercept(Chain chain) throws IOException {
                     Request original = chain.request();
                     
-                    // Add headers to mimic a browser request
+                    // Append cache-busting query parameter for playlist.json requests
+                    okhttp3.HttpUrl url = original.url();
+                    if ("GET".equalsIgnoreCase(original.method()) && url.encodedPath().endsWith("playlist.json")) {
+                        url = url.newBuilder()
+                                .addQueryParameter("ts", String.valueOf(System.currentTimeMillis()))
+                                .build();
+                    }
+
+                    // Add headers to mimic a browser request and bypass caches
                     Request request = original.newBuilder()
+                            .url(url)
                             .header("User-Agent", "Mozilla/5.0 (Android) CineCraze/1.0")
                             .header("Accept", "application/json")
+                            .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                            .header("Pragma", "no-cache")
+                            .header("Expires", "0")
                             .method(original.method(), original.body())
                             .build();
                     
