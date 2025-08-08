@@ -44,6 +44,8 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class DetailsActivity extends AppCompatActivity {
 
@@ -575,13 +577,41 @@ public class DetailsActivity extends AppCompatActivity {
     private List<Server> getCurrentServers() {
         // For TV series, get servers from current episode
         if (currentEpisode != null && currentEpisode.getServers() != null && !currentEpisode.getServers().isEmpty()) {
-            return currentEpisode.getServers();
+            return sortServersByPreference(new ArrayList<>(currentEpisode.getServers()));
         }
         // For movies, get servers from current entry
         if (currentEntry != null) {
-            return currentEntry.getServers();
+            List<Server> servers = currentEntry.getServers();
+            return servers != null ? sortServersByPreference(new ArrayList<>(servers)) : null;
         }
         return null;
+    }
+
+    private List<Server> sortServersByPreference(List<Server> servers) {
+        if (servers == null || servers.isEmpty()) return servers;
+        Collections.sort(servers, new Comparator<Server>() {
+            @Override
+            public int compare(Server a, Server b) {
+                int pa = getDomainPreference(a.getUrl());
+                int pb = getDomainPreference(b.getUrl());
+                if (pa != pb) return Integer.compare(pa, pb);
+                String an = a.getName() != null ? a.getName() : "";
+                String bn = b.getName() != null ? b.getName() : "";
+                return an.compareToIgnoreCase(bn);
+            }
+        });
+        return servers;
+    }
+
+    private int getDomainPreference(String url) {
+        if (url == null) return 999;
+        String u = url.toLowerCase();
+        if (u.contains("vidlink.pro")) return 0;
+        if (u.contains("embed.su")) return 1;
+        if (u.contains("vidsrc.xyz")) return 2;
+        if (u.contains("vidsrc.net")) return 3;
+        if (u.contains("player.autoembed.cc") || u.contains("autoembed.cc")) return 4;
+        return 100;
     }
 
     private Entry getEntryFromIntent() {

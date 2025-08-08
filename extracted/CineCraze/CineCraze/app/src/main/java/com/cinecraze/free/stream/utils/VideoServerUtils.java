@@ -24,13 +24,20 @@ public class VideoServerUtils {
     public static final String YOUTUBE_EMBED_BASE = "https://www.youtube.com/embed";
     public static final String GOOGLE_DRIVE_BASE = "https://drive.google.com";
     public static final String MEGA_BASE = "https://mega.nz";
+    // Additional embed bases
+    public static final String VIDSRC_XYZ_BASE = "https://vidsrc.xyz/embed";
+    public static final String EMBED_SU_BASE = "https://embed.su/embed";
+    public static final String VIDLINK_PRO_BASE = "https://vidlink.pro";
+    public static final String AUTOEMBED_BASE = "https://player.autoembed.cc/embed";
     
     // Popular embedded video servers (including common variations)
     public static final String[] EMBED_SERVERS = {
         "vidsrc.to", "vidsrc.net", "vidjoy.pro", "vidbinge.dev", "multiembed.mov", "superembed.mov",
         "youtube.com", "youtu.be", "drive.google.com", "mega.nz",
         "streamwish.to", "doodstream.com", "mixdrop.co", "streamtape.com",
-        "vidcloud.co", "upcloud.to", "nova.video", "streamhub.to"
+        "vidcloud.co", "upcloud.to", "nova.video", "streamhub.to",
+        // Added
+        "vidsrc.xyz", "vidsrc.me", "embed.su", "vidlink.pro", "autoembed.cc", "player.autoembed.cc"
     };
     
     // Video quality options
@@ -113,6 +120,14 @@ public class VideoServerUtils {
             return addMultiembedParameters(originalUrl);
         } else if (isMpdUrl(originalUrl)) {
             return addMpdParameters(originalUrl);
+        } else if (originalUrl.contains("vidsrc.xyz")) {
+            return addVidsrcXyzParameters(originalUrl);
+        } else if (originalUrl.contains("embed.su")) {
+            return addEmbedSuParameters(originalUrl);
+        } else if (originalUrl.contains("vidlink.pro")) {
+            return addVidlinkProParameters(originalUrl);
+        } else if (originalUrl.contains("autoembed.cc") || originalUrl.contains("player.autoembed.cc")) {
+            return addAutoembedParameters(originalUrl);
         }
         
         return originalUrl;
@@ -308,6 +323,55 @@ public class VideoServerUtils {
                   .append("&controls=1");
         
         Log.d(TAG, "Enhanced Multiembed URL (with redirect handling): " + enhancedUrl.toString());
+        return enhancedUrl.toString();
+    }
+    
+    // New: Add simple enhancement parameters for additional domains
+    private static String addVidsrcXyzParameters(String url) {
+        StringBuilder enhancedUrl = new StringBuilder(url);
+        if (!url.contains("?")) {
+            enhancedUrl.append("?");
+        } else {
+            enhancedUrl.append("&");
+        }
+        enhancedUrl.append("autoplay=1");
+        Log.d(TAG, "Enhanced VidSrc.xyz URL: " + enhancedUrl.toString());
+        return enhancedUrl.toString();
+    }
+    
+    private static String addEmbedSuParameters(String url) {
+        StringBuilder enhancedUrl = new StringBuilder(url);
+        if (!url.contains("?")) {
+            enhancedUrl.append("?");
+        } else {
+            enhancedUrl.append("&");
+        }
+        enhancedUrl.append("autoplay=1");
+        Log.d(TAG, "Enhanced Embed.su URL: " + enhancedUrl.toString());
+        return enhancedUrl.toString();
+    }
+    
+    private static String addVidlinkProParameters(String url) {
+        StringBuilder enhancedUrl = new StringBuilder(url);
+        if (!url.contains("?")) {
+            enhancedUrl.append("?");
+        } else {
+            enhancedUrl.append("&");
+        }
+        enhancedUrl.append("autoplay=1");
+        Log.d(TAG, "Enhanced VidLink.pro URL: " + enhancedUrl.toString());
+        return enhancedUrl.toString();
+    }
+    
+    private static String addAutoembedParameters(String url) {
+        StringBuilder enhancedUrl = new StringBuilder(url);
+        if (!url.contains("?")) {
+            enhancedUrl.append("?");
+        } else {
+            enhancedUrl.append("&");
+        }
+        enhancedUrl.append("autoplay=1");
+        Log.d(TAG, "Enhanced AutoEmbed URL: " + enhancedUrl.toString());
         return enhancedUrl.toString();
     }
     
@@ -602,6 +666,12 @@ public class VideoServerUtils {
                 } else {
                     return VIDSRC_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
                 }
+            case "vidsrcnet":
+                if (type.equals("movie")) {
+                    return VIDSRC_NET_BASE + "/movie/" + tmdbId;
+                } else {
+                    return VIDSRC_NET_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
+                }
             case "vidjoy":
                 if (type.equals("movie")) {
                     return VIDJOY_BASE + "/movie/" + tmdbId;
@@ -625,6 +695,31 @@ public class VideoServerUtils {
                     return SUPEREMBED_BASE + "/movie/" + tmdbId;
                 } else {
                     return SUPEREMBED_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
+                }
+            case "vidsrcxyz":
+                if (type.equals("movie")) {
+                    return VIDSRC_XYZ_BASE + "/movie/" + tmdbId;
+                } else {
+                    return VIDSRC_XYZ_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
+                }
+            case "embedsu":
+                if (type.equals("movie")) {
+                    return EMBED_SU_BASE + "/movie/" + tmdbId;
+                } else {
+                    return EMBED_SU_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
+                }
+            case "vidlink":
+            case "vidlinkpro":
+                if (type.equals("movie")) {
+                    return VIDLINK_PRO_BASE + "/movie/" + tmdbId;
+                } else {
+                    return VIDLINK_PRO_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
+                }
+            case "autoembed":
+                if (type.equals("movie")) {
+                    return AUTOEMBED_BASE + "/movie/" + tmdbId;
+                } else {
+                    return AUTOEMBED_BASE + "/tv/" + tmdbId + "/" + season + "/" + episode;
                 }
             default:
                 return null;
@@ -681,6 +776,11 @@ public class VideoServerUtils {
         if (url.contains("doodstream.com")) return "DoodStream";
         if (url.contains("mixdrop.co")) return "MixDrop";
         if (url.contains("streamtape.com")) return "StreamTape";
+        // Added
+        if (url.contains("vidsrc.xyz")) return "VidSrc.xyz";
+        if (url.contains("embed.su")) return "Embed.su";
+        if (url.contains("vidlink.pro")) return "VidLink.pro";
+        if (url.contains("autoembed.cc") || url.contains("player.autoembed.cc")) return "AutoEmbed";
         
         for (String server : EMBED_SERVERS) {
             if (url.contains(server)) {
