@@ -5435,7 +5435,7 @@ Proceed with removal?`;
                                 servers.push({ name, url });
                             }
                         });
-                        entry.Servers = servers;
+                        entry.Servers = dedupeServers([...(entry.Servers || []), ...servers]);
                         
                         // Update episode servers for TV Series
                         if (entry.Seasons) {
@@ -5453,7 +5453,7 @@ Proceed with removal?`;
                                         }
                                     });
                                     
-                                    episode.Servers = episodeServers;
+                                    episode.Servers = dedupeServers([...(episode.Servers || []), ...episodeServers]);
                                 });
                             });
                         }
@@ -6589,7 +6589,7 @@ Proceed with removal?`;
                 
                 // Add embed sources to existing servers
                 if (!entry.Servers) entry.Servers = [];
-                entry.Servers.push(...embedSources);
+                entry.Servers = dedupeServers([...entry.Servers, ...embedSources]);
                 
                 added += embedSources.length;
             });
@@ -6960,6 +6960,22 @@ Proceed with removal?`;
             }
         }
 
+        // Helper: merge and deduplicate servers by URL while preserving existing links
+        function dedupeServers(servers) {
+            if (!Array.isArray(servers)) return [];
+            const seen = new Set();
+            const out = [];
+            for (const srv of servers) {
+                if (!srv || !srv.url) continue;
+                const key = srv.url.trim().toLowerCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    out.push({ name: srv.name, url: srv.url });
+                }
+            }
+            return out;
+        }
+
         function clearAllSelections() {
             // Uncheck all checkboxes
             document.querySelectorAll('.content-checkbox-item input[type="checkbox"]').forEach(checkbox => {
@@ -7168,10 +7184,13 @@ Proceed with removal?`;
                         const autoSources = generateEmbedSources(tmdbId, 'movie');
                         autoSources.forEach(source => {
                             movie.Servers = movie.Servers || [];
-                            movie.Servers.push({
-                                name: source.name || source.title,
-                                url: source.url
-                            });
+                            movie.Servers = dedupeServers([
+                                ...movie.Servers,
+                                {
+                                    name: source.name || source.title,
+                                    url: source.url
+                                }
+                            ]);
                         });
                     }
                 }
@@ -7188,6 +7207,57 @@ Proceed with removal?`;
                     
                     if (seriesEntry) {
                         await updateSeriesMetadata(seriesEntry, seriesData, credits);
+
+                        // NEW: Detect and generate any missing seasons/episodes for this series
+                        try {
+                            const allSeasons = seriesData.seasons || [];
+                            const existingSeasons = new Set(seriesEntry.Seasons?.map(s => s.Season) || []);
+                            let generatedCount = 0;
+
+                            for (const tmdbSeason of allSeasons) {
+                                const seasonNumber = tmdbSeason.season_number;
+                                if (!existingSeasons.has(seasonNumber)) {
+                                    const newSeason = await generateMissingSeason(tmdbId, seasonNumber, seriesEntry);
+                                    if (newSeason) {
+                                        if (!seriesEntry.Seasons) seriesEntry.Seasons = [];
+                                        seriesEntry.Seasons.push(newSeason);
+                                        generatedCount++;
+                                    }
+                                } else {
+                                    const existingSeason = seriesEntry.Seasons.find(s => s.Season === seasonNumber);
+                                    if (existingSeason) {
+                                        const seasonData = await fetchTMDB(`/tv/${tmdbId}/season/${seasonNumber}`);
+                                        if (seasonData) {
+                                            const allEpisodes = seasonData.episodes || [];
+                                            const existingEpisodes = new Set(existingSeason.Episodes?.map(e => e.Episode) || []);
+                                            for (const tmdbEpisode of allEpisodes) {
+                                                if (!existingEpisodes.has(tmdbEpisode.episode_number)) {
+                                                    const newEpisode = await generateMissingEpisode(tmdbId, seasonNumber, tmdbEpisode, seriesEntry);
+                                                    if (newEpisode) {
+                                                        if (!existingSeason.Episodes) existingSeason.Episodes = [];
+                                                        existingSeason.Episodes.push(newEpisode);
+                                                        // Keep episodes ordered
+                                                        existingSeason.Episodes.sort((a, b) => a.Episode - b.Episode);
+                                                        generatedCount++;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Ensure seasons are ordered
+                            if (seriesEntry.Seasons) {
+                                seriesEntry.Seasons.sort((a, b) => a.Season - b.Season);
+                            }
+
+                            if (generatedCount > 0) {
+                                console.log(`🆕 Generated ${generatedCount} missing seasons/episodes for ${seriesEntry.Title}`);
+                            }
+                        } catch (genErr) {
+                            console.warn(`Failed generating missing content for ${seriesEntry.Title}:`, genErr);
+                        }
                     }
                     
                     // Process series episodes
@@ -7217,10 +7287,13 @@ Proceed with removal?`;
                         const autoSources = generateEmbedSources(tmdbId, 'tv', seasonNum, episodeNum);
                         autoSources.forEach(source => {
                             episode.Servers = episode.Servers || [];
-                            episode.Servers.push({
-                                name: source.name || source.title,
-                                url: source.url
-                            });
+                            episode.Servers = dedupeServers([
+                                ...episode.Servers,
+                                {
+                                    name: source.name || source.title,
+                                    url: source.url
+                                }
+                            ]);
                         });
                     }
                 }
@@ -7465,7 +7538,7 @@ Proceed with removal?`;
                         
                         // Preserve existing servers and add embed sources
                         if (!item.entry.Servers) item.entry.Servers = [];
-                        item.entry.Servers.push(...embedSources);
+                        item.entry.Servers = dedupeServers([...item.entry.Servers, ...embedSources]);
                         
                         // Update the actual data structure
                         const moviesCategory = currentData.Categories.find(c => c.MainCategory === "Movies");
@@ -7523,7 +7596,7 @@ Proceed with removal?`;
                         
                         // Preserve existing servers and add embed sources
                         if (!item.entry.Servers) item.entry.Servers = [];
-                        item.entry.Servers.push(...embedSources);
+                        item.entry.Servers = dedupeServers([...item.entry.Servers, ...embedSources]);
                         
                         // Update the actual data structure
                         const seriesCategory = currentData.Categories.find(c => c.MainCategory === "TV Series");
